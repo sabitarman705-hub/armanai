@@ -506,6 +506,11 @@ def api_video_status(task_id):
 
         if isinstance(status, fal_client.Completed):
             if status.error:
+                db = _db()
+                db.execute('UPDATE users SET balance = balance + ? WHERE id=?',
+                           (task['cost'], task['user_id']))
+                db.commit()
+                db.close()
                 with _tasks_lock:
                     _tasks.pop(task_id, None)
                     _persist_tasks()

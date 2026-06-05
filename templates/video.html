@@ -531,10 +531,7 @@ function startJobPoll(taskId) {
       }
 
       if (data.status === 'succeed' && data.video_url) {
-        const jobCost = job.cost || 0;
         stopJob(taskId);
-        // Баланс тек сәтті болғанда ғана шегеріледі
-        await deductBalance(jobCost);
         updateHistoryStatus(taskId, 'success', data.video_url);
         displayResult(data.video_url);
         return;
