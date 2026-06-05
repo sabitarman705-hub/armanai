@@ -34,7 +34,7 @@ google = oauth.register(
 )
 
 # ── Auth (SQLite) ──────────────────────────────────────────────────────────────
-DB_PATH = os.path.join(os.path.dirname(__file__), 'users.db')
+DB_PATH = os.getenv('DB_PATH', os.path.join(os.path.dirname(__file__), 'users.db'))
 
 def _db():
     db = sqlite3.connect(DB_PATH, timeout=20, check_same_thread=False)
