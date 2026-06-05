@@ -505,6 +505,7 @@ async function startVideo() {
 
 function startJobPoll(taskId) {
   let attempts = 0;
+  let stopped = false;
 
   // 1-second tick for time display
   const tickId = setInterval(() => {
@@ -512,25 +513,24 @@ function startJobPoll(taskId) {
     renderQueue();
   }, 1000);
 
-  // 10-second poll for status
-  const pollId = setInterval(async () => {
-    if (!_activeJobs.has(taskId)) { clearInterval(pollId); return; }
+  _pollTimers.set(taskId, { pollId: null, tickId });
+
+  // setTimeout-based polling — prevents race conditions from overlapping requests
+  async function pollOnce() {
+    if (stopped || !_activeJobs.has(taskId)) return;
     attempts++;
 
     try {
       const r    = await fetch(`/api/video-status/${taskId}`);
       const data = await r.json();
-      const job  = _activeJobs.get(taskId);
-      if (!job) { clearInterval(pollId); return; }
 
-      if (data.error) {
-        stopJob(taskId);
-        updateHistoryStatus(taskId, 'failed');
-        showErr(data.error);
-        return;
-      }
+      if (stopped || !_activeJobs.has(taskId)) return;
+
+      const job = _activeJobs.get(taskId);
+      if (!job) return;
 
       if (data.status === 'succeed' && data.video_url) {
+        stopped = true;
         stopJob(taskId);
         updateHistoryStatus(taskId, 'success', data.video_url);
         displayResult(data.video_url);
@@ -538,10 +538,18 @@ function startJobPoll(taskId) {
       }
 
       if (data.status === 'failed') {
+        stopped = true;
         stopJob(taskId);
-        // Сәтсіз болса ақша кеспейміз
         updateHistoryStatus(taskId, 'failed');
-        showErr('Видео жасалмады. Ақша шегерілмеді. Қайтадан сынап көріңіз.');
+        showErr('Видео жасалмады. Қайтадан сынап көріңіз.');
+        return;
+      }
+
+      if (data.error) {
+        stopped = true;
+        stopJob(taskId);
+        updateHistoryStatus(taskId, 'failed');
+        showErr(data.error);
         return;
       }
 
@@ -552,12 +560,20 @@ function startJobPoll(taskId) {
         job.statusText = msgs[attempts % msgs.length];
       }
       renderQueue();
+
+      if (attempts > 72) {
+        stopped = true;
+        stopJob(taskId);
+        updateHistoryStatus(taskId, 'failed');
+        showErr('Уақыт аяқталды (12 мин).');
+        return;
+      }
     } catch (_) {}
 
-    if (attempts > 72) { stopJob(taskId); updateHistoryStatus(taskId, 'failed'); showErr('Уақыт аяқталды (12 мин).'); }
-  }, 10000);
+    if (!stopped) setTimeout(pollOnce, 10000);
+  }
 
-  _pollTimers.set(taskId, { pollId, tickId });
+  setTimeout(pollOnce, 10000);
 }
 
 function stopJob(taskId) {
