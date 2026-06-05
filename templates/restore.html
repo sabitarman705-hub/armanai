@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Фото қалпына келтіру{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>🖼️ Фото қалпына келтіру</h1>
+  <p>Ескі немесе бұлдыр суретті AI модельімен жақсарт</p>
+</div>
+
+<div class="tool-layout">
+  <!-- Upload panel -->
+  <div class="panel">
+    <h3 class="panel-title">Сурет жүктеу</h3>
+
+    <div class="drop-zone" id="restoreDropZone">
+      <input type="file" id="restoreFile" accept="image/*" hidden/>
+      <div class="drop-content" id="restoreDropContent">
+        <div class="drop-icon">📁</div>
+        <p>Суретті осы жерге сүйреп апар немесе <span class="link-text">таңда</span></p>
+        <p class="hint">JPG, PNG, WEBP · макс 20 МБ</p>
+      </div>
+      <img id="restorePreview" class="preview-img hidden" alt="preview"/>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Модель</label>
+      <select id="restoreModel" class="form-select">
+        {% for key, name in models.items() %}
+        <option value="{{ key }}">{{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <button class="btn-primary" id="restoreBtn" onclick="startRestore()">
+      ✨ Қалпына келтіру
+    </button>
+
+    <div id="restoreProgress" class="progress-block hidden">
+      <div class="spinner"></div>
+      <span id="restoreStatus">Өңделуде…</span>
+    </div>
+  </div>
+
+  <!-- Result panel -->
+  <div class="panel">
+    <h3 class="panel-title">Нәтиже</h3>
+    <div class="compare-wrap" id="compareWrap">
+      <div class="compare-side">
+        <span class="compare-label">Бұрын</span>
+        <img id="origImg" class="compare-img placeholder-img" src="" alt="бұрын"/>
+      </div>
+      <div class="compare-divider">→</div>
+      <div class="compare-side">
+        <span class="compare-label">Кейін</span>
+        <img id="resultImg" class="compare-img placeholder-img" src="" alt="кейін"/>
+      </div>
+    </div>
+    <a id="downloadRestore" class="btn-secondary hidden" download="restored.jpg">⬇️ Жүктеп алу</a>
+    <div id="restoreError" class="error-msg hidden"></div>
+  </div>
+</div>
+
+<!-- Өңдеу тарихы -->
+<div class="restore-history-wrap">
+  <div class="history-panel hidden" id="restoreHistorySection">
+    <div class="history-header">
+      <span class="history-title">📋 Өңдеу тарихы</span>
+      <button class="history-clear-btn" onclick="clearRestoreHistory()">Тазарту</button>
+    </div>
+    <div class="history-list" id="restoreHistoryList"></div>
+  </div>
+</div>
+{% endblock %}

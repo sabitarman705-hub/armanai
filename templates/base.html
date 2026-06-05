@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}ArmanAI{% endblock %}</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>"/>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">
+    <span class="brand-icon">✦</span>
+    <span class="brand-name">ArmanAI</span>
+  </div>
+  <button class="nav-burger" id="navBurger" onclick="toggleMenu()" aria-label="Меню">☰</button>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">🏠 Басты</a></li>
+    <li><a href="/restore" class="nav-link {% if request.path == '/restore' %}active{% endif %}">🖼️ Фото</a></li>
+    <li><a href="/video" class="nav-link {% if request.path == '/video' %}active{% endif %}">🎬 Видео</a></li>
+    {% if session.get('username') %}
+    <li class="nav-user">
+      <a href="/topup" class="nav-balance" id="navBalance" title="Баланс толтыру">
+        $ <span id="navBalanceAmt">…</span>
+      </a>
+      {% if session.get('avatar') %}
+      <img src="{{ session.avatar }}" class="nav-avatar" alt="avatar"/>
+      {% else %}
+      <span class="nav-avatar-placeholder">👤</span>
+      {% endif %}
+      <span class="nav-username">{{ session.username }}</span>
+      <a href="/logout" class="nav-link nav-logout">Шығу</a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+<div id="toast-container"></div>
+
+<main class="main-content">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+  <p>ArmanAI · 2026</p>
+</footer>
+
+<script src="/static/js/main.js"></script>
+<script>
+// Навбар балансын жүктеу
+(async function loadNavBalance() {
+  const el = document.getElementById('navBalanceAmt');
+  if (!el) return;
+  try {
+    const res  = await fetch('/api/balance');
+    const data = await res.json();
+    if (typeof data.balance === 'number') {
+      el.textContent = data.balance.toFixed(2);
+    }
+  } catch (_) { el.textContent = '–'; }
+})();
+
+function toggleMenu() {
+  document.getElementById('navLinks').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  const links = document.getElementById('navLinks');
+  const burger = document.getElementById('navBurger');
+  if (links && burger && !links.contains(e.target) && !burger.contains(e.target)) {
+    links.classList.remove('open');
+  }
+});
+
+// ── Toast хабарламалар (барлық беттен қолдануға болады)
+function showToast(msg, type = 'info') {
+  const c = document.getElementById('toast-container');
+  if (!c) return;
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3200);
+}
+</script>
+</body>
+</html>

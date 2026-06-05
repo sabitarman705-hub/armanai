@@ -1,0 +1,848 @@
+{% extends "base.html" %}
+{% block title %}ArmanAI — Video Studio{% endblock %}
+
+{% block content %}
+<div class="studio-wrap">
+
+  <!-- ── Header ── -->
+  <div class="studio-header">
+    <h1 class="studio-title">🎬 Video Studio</h1>
+    <p class="studio-sub">ArmanAI · fal.ai + Kling AI</p>
+  </div>
+
+  <!-- ── Balance bar ── -->
+  <div class="balance-bar">
+    <div class="balance-left">
+      <span class="balance-label">💰 Баланс:</span>
+      <span class="balance-dollar">$</span>
+      <span id="balanceDisplay" class="balance-amount">0.00</span>
+      <span id="balanceKzt" class="balance-kzt">≈ 0 ₸</span>
+      <button class="topup-btn" onclick="openTopup()">+ Кредит қосу</button>
+    </div>
+    <div class="balance-right">
+      <span class="balance-label">Таңдалған модель:</span>
+      <span id="modelCostLabel" class="gen-count" style="font-size:.82rem"></span>
+      <span class="balance-label">·</span>
+      <span id="genCount" class="gen-count">~0 видео</span>
+    </div>
+  </div>
+
+  <!-- Кредит қосу модалы -->
+  <div id="topupModal" class="modal-overlay hidden" onclick="closeTopupOutside(event)">
+    <div class="modal-box">
+      <div class="modal-title">💳 Кредит қосу</div>
+      <p class="modal-sub">fal.ai аккаунтыңдағы балансты осында енгіз. Видео сәтті жасалғанда автоматты шегеріледі.</p>
+      <div class="modal-row">
+        <span class="modal-dollar">$</span>
+        <input type="number" id="topupInput" class="modal-input" placeholder="0.00" step="0.01" min="0"/>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn-cancel" onclick="closeTopup()">Болдырмау</button>
+        <button class="modal-btn-ok" onclick="confirmTopup()">Сақтау</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Model selector ── -->
+  <div class="model-bar">
+    {% for key, m in models.items() %}
+    <button class="model-chip {% if key == 'v1.5-pro' %}active{% endif %}"
+            data-model="{{ key }}" data-cost="{{ m.cost }}" onclick="selectModel(this)">
+      <span class="chip-name">{{ m.name }}</span>
+      <span class="chip-tag">{{ m.tag }}</span>
+      <span class="chip-cost">≈{{ (m.cost * 500) | round | int }}₸/5с</span>
+    </button>
+    {% endfor %}
+  </div>
+
+  <!-- ── Main Grid ── -->
+  <div class="studio-grid">
+
+    <!-- LEFT: inputs + controls -->
+    <div class="studio-left">
+
+      <div class="uploads-row">
+        <div class="upload-card" id="beforeCard">
+          <div class="upload-label" id="beforeLabel">Бастапқы фото <span class="req">*</span></div>
+          <div class="drop-zone" id="beforeZone">
+            <input type="file" id="beforeFile" accept="image/*" hidden/>
+            <div class="dz-inner" id="beforeInner">
+              <div class="dz-icon">🖼️</div>
+              <p>Before · Ескі фото</p>
+              <span class="dz-hint">Басу немесе сүйреп апару</span>
+            </div>
+            <img id="beforePreview" class="dz-preview hidden" alt=""/>
+          </div>
+        </div>
+
+        <div class="upload-divider" id="uploadDivider">→</div>
+
+        <div class="upload-card" id="afterCard">
+          <div class="upload-label">Соңғы фото <span class="opt">(қосымша)</span></div>
+          <div class="drop-zone" id="afterZone">
+            <input type="file" id="afterFile" accept="image/*" hidden/>
+            <div class="dz-inner" id="afterInner">
+              <div class="dz-icon">📸</div>
+              <p>After · Жаңа фото</p>
+              <span class="dz-hint">Басу немесе сүйреп апару</span>
+            </div>
+            <img id="afterPreview" class="dz-preview hidden" alt=""/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prompt -->
+      <div class="ctrl-block">
+        <label class="ctrl-label">Промт — Видеоны қалай сипаттайсың?</label>
+        <textarea id="promptText" class="ctrl-textarea" rows="3"
+          placeholder="мысалы: smooth transformation, dramatic lighting, cinematic style...">smooth cinematic transformation, dramatic lighting, high quality</textarea>
+      </div>
+
+      <div class="ctrl-block">
+        <label class="ctrl-label">Теріс промт</label>
+        <input type="text" id="negPrompt" class="ctrl-input"
+          value="blurry, distorted, low quality, watermark, text"/>
+      </div>
+
+      <!-- Params row -->
+      <div class="params-row">
+        <div class="param-group">
+          <label class="ctrl-label">Ұзақтық</label>
+          <div class="toggle-group">
+            <button class="toggle-btn active" data-val="5" onclick="setParam('duration', this)">5 сек</button>
+            <button class="toggle-btn" data-val="10" onclick="setParam('duration', this)">10 сек</button>
+          </div>
+        </div>
+
+        <div class="param-group">
+          <label class="ctrl-label">Форматы</label>
+          <div class="toggle-group">
+            <button class="toggle-btn active" data-val="16:9" onclick="setParam('aspect', this)">16:9</button>
+            <button class="toggle-btn" data-val="9:16" onclick="setParam('aspect', this)">9:16</button>
+            <button class="toggle-btn" data-val="1:1" onclick="setParam('aspect', this)">1:1</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Generate button -->
+      <button class="gen-btn" id="genBtn" onclick="startVideo()">
+        <span id="genBtnText">⚡ Видео жасау</span>
+      </button>
+
+      <!-- Brief "submitting" indicator (hides once queued) -->
+      <div id="submitProgress" class="gen-progress hidden">
+        <div class="gen-spinner"></div>
+        <div class="gen-progress-info">
+          <span id="submitStatus">Жіберілуде…</span>
+        </div>
+      </div>
+
+      <div id="videoError" class="error-msg hidden"></div>
+    </div>
+
+    <!-- RIGHT: result + queue + history -->
+    <div class="studio-right">
+
+      <div class="result-panel">
+        <div class="result-label" id="resultLabel">Нәтиже</div>
+
+        <div id="resultPlaceholder" class="result-placeholder">
+          <div class="placeholder-film" id="placeholderIcon">🎞️</div>
+          <p id="placeholderText">Видео осы жерде шығады</p>
+          <p class="dz-hint">Фото жүктеп, Generate басыңыз</p>
+        </div>
+
+        <video id="resultVideo" class="result-video hidden" controls playsinline></video>
+        <img  id="resultImage" class="result-video hidden" alt="нәтиже" style="object-fit:contain;background:#000"/>
+
+        <div id="resultActions" class="result-actions hidden">
+          <a id="downloadBtn" class="dl-btn" download="video.mp4">⬇ Жүктеп алу</a>
+          <button class="dl-btn secondary" id="resetBtn" onclick="resetVideo()">🔄 Жаңадан</button>
+        </div>
+        <div id="resultError" class="error-msg hidden"></div>
+      </div>
+
+      <!-- Active queue panel -->
+      <div class="queue-panel hidden" id="queueSection">
+        <div class="queue-header">
+          <span class="queue-title">⏳ Кезек</span>
+          <span id="queueCount" class="queue-count"></span>
+        </div>
+        <div class="queue-list" id="queueList"></div>
+      </div>
+
+      <!-- History panel -->
+      <div class="history-panel hidden" id="historySection">
+        <div class="history-header">
+          <span class="history-title">📋 Тарих</span>
+          <div class="h-header-right">
+            <button id="downloadSelectedBtn" class="h-dl-sel-btn hidden" onclick="downloadSelected()">⬇ <span id="dlSelCount">0 видео</span></button>
+            <label class="h-sel-all-label">
+              <input type="checkbox" id="selectAllChk" onchange="toggleSelectAll()"/> Барлығы
+            </label>
+            <button class="history-clear-btn" onclick="clearHistory()">Тазарту</button>
+          </div>
+        </div>
+        <div class="history-list" id="historyList"></div>
+      </div>
+
+    </div>
+
+  </div><!-- /studio-grid -->
+
+</div>
+
+<script>
+const MODELS = {{ models | tojson }};
+let selectedModel  = 'v1.5-pro';
+let selectedDur    = '5';
+let selectedAspect = '16:9';
+
+const KZT_RATE = 500;
+
+// ── Баланс (DB-ден жүктеу) ────────────────────────────────────────────────────
+let _balance = 0;
+
+async function loadBalance() {
+  try {
+    const r = await fetch('/api/balance');
+    const d = await r.json();
+    _balance = d.balance || 0;
+    renderBalance();
+  } catch (_) {}
+}
+
+async function saveBalance(amount) {
+  try {
+    await fetch('/api/balance', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({action: 'set', amount})
+    });
+  } catch (_) {}
+}
+
+async function deductBalance(amount) {
+  try {
+    const r = await fetch('/api/balance', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({action: 'deduct', amount})
+    });
+    const d = await r.json();
+    _balance = d.balance || 0;
+    renderBalance();
+  } catch (_) {}
+}
+
+function renderBalance() {
+  document.getElementById('balanceDisplay').textContent = _balance.toFixed(2);
+  document.getElementById('balanceKzt').textContent =
+    `≈ ${Math.round(_balance * KZT_RATE).toLocaleString('ru-RU')} ₸`;
+  updateBalance();
+}
+
+// Топ-ап модал
+function openTopup() {
+  document.getElementById('topupInput').value = _balance.toFixed(2);
+  document.getElementById('topupModal').classList.remove('hidden');
+  document.getElementById('topupInput').focus();
+}
+function closeTopup() {
+  document.getElementById('topupModal').classList.add('hidden');
+}
+function closeTopupOutside(e) {
+  if (e.target.id === 'topupModal') closeTopup();
+}
+async function confirmTopup() {
+  const val = parseFloat(document.getElementById('topupInput').value) || 0;
+  _balance = val;
+  await saveBalance(val);
+  renderBalance();
+  closeTopup();
+  if (typeof showToast === 'function') showToast(`Баланс $${val.toFixed(2)} болып сақталды`, 'success');
+}
+
+// Ctrl+V paste — видео бетінде де жұмыс жасасын
+document.addEventListener('paste', e => {
+  const items = e.clipboardData?.items || [];
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const file = item.getAsFile();
+      if (!file) continue;
+      _droppedBefore = file;
+      showPreview(file,
+        document.getElementById('beforePreview'),
+        document.getElementById('beforeInner'));
+      showToast('Сурет paste жасалды', 'success');
+      break;
+    }
+  }
+});
+
+// ── Model selector
+function selectModel(btn) {
+  document.querySelectorAll('.model-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedModel = btn.dataset.model;
+
+  const modelInfo = MODELS[selectedModel] || {};
+  const isEdit    = modelInfo.type === 'edit';
+
+  // Nano Banana: тек 1 фото, "After" жасырамыз
+  document.getElementById('afterCard').style.display    = isEdit ? 'none' : '';
+  document.getElementById('uploadDivider').style.display = isEdit ? 'none' : '';
+  document.querySelector('.params-row').style.display   = isEdit ? 'none' : '';
+
+  // Label / button мәтін өзгерту
+  document.getElementById('beforeLabel').innerHTML = isEdit
+    ? 'Фото <span class="req">*</span>'
+    : 'Бастапқы фото <span class="req">*</span>';
+  document.getElementById('genBtnText').textContent = isEdit
+    ? '✨ Фото өңдеу'
+    : '⚡ Видео жасау';
+
+  // Result placeholder мәтін
+  document.getElementById('placeholderIcon').textContent = isEdit ? '🖼️' : '🎞️';
+  document.getElementById('placeholderText').textContent = isEdit
+    ? 'Өңделген фото осы жерде шығады'
+    : 'Видео осы жерде шығады';
+  document.getElementById('resultLabel').textContent = isEdit ? 'Нәтиже (фото)' : 'Нәтиже';
+
+  updateChipCosts();
+  updateBalance();
+}
+
+function updateBalance() {
+  const activeBtn = document.querySelector('.model-chip.active');
+  const baseCost  = activeBtn ? parseFloat(activeBtn.dataset.cost) || 0 : 0;
+  const modelInfo = MODELS[selectedModel] || {};
+  const isEdit    = modelInfo.type === 'edit';
+  const durMult   = isEdit ? 1 : parseInt(selectedDur || 5) / 5;
+  const cost      = baseCost * durMult;
+  const count     = cost > 0 ? Math.floor(_balance / cost) : 0;
+  const durLabel  = isEdit ? '' : `/${selectedDur}с`;
+  const costKzt   = Math.round(cost * KZT_RATE);
+  const costLabel = document.getElementById('modelCostLabel');
+  if (costLabel) costLabel.textContent = cost > 0 ? `≈${costKzt.toLocaleString('ru-RU')}₸${durLabel}` : '';
+  document.getElementById('genCount').textContent = isEdit ? `~${count} фото` : `~${count} видео`;
+}
+
+// ── Param toggles
+function setParam(name, btn) {
+  btn.closest('.toggle-group').querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (name === 'duration') { selectedDur = btn.dataset.val; updateChipCosts(); }
+  if (name === 'aspect')   selectedAspect = btn.dataset.val;
+  updateBalance();
+}
+
+function updateChipCosts() {
+  const durMult = parseInt(selectedDur || 5) / 5;
+  document.querySelectorAll('.model-chip').forEach(chip => {
+    const base = parseFloat(chip.dataset.cost) || 0;
+    const kzt  = Math.round(base * durMult * KZT_RATE);
+    const label = durMult === 1 ? '5с' : `${selectedDur}с`;
+    const costEl = chip.querySelector('.chip-cost');
+    if (costEl) costEl.textContent = `≈${kzt.toLocaleString('ru-RU')}₸/${label}`;
+  });
+}
+
+// ── Drop zones
+// Dropped файлдарды сақтаймыз (input.files DnD-де жаңармайды)
+let _droppedBefore = null;
+let _droppedAfter  = null;
+
+// Браузер бетін ашпасын үшін бет деңгейінде де preventDefault
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop',     e => e.preventDefault());
+
+function initDrop(zoneId, inputId, previewId, innerId, isAfter) {
+  const zone    = document.getElementById(zoneId);
+  const input   = document.getElementById(inputId);
+  const preview = document.getElementById(previewId);
+  const inner   = document.getElementById(innerId);
+
+  zone.addEventListener('click', () => input.click());
+
+  zone.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    zone.classList.add('dz-over');
+  });
+  zone.addEventListener('dragleave', e => {
+    if (!zone.contains(e.relatedTarget)) zone.classList.remove('dz-over');
+  });
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    zone.classList.remove('dz-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      if (isAfter) _droppedAfter = file; else _droppedBefore = file;
+      showPreview(file, preview, inner);
+    }
+  });
+  input.addEventListener('change', () => {
+    if (input.files[0]) {
+      if (isAfter) _droppedAfter = null; else _droppedBefore = null;
+      showPreview(input.files[0], preview, inner);
+    }
+  });
+}
+
+function showPreview(file, preview, inner) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    preview.src = e.target.result;
+    preview.classList.remove('hidden');
+    inner.classList.add('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+initDrop('beforeZone', 'beforeFile', 'beforePreview', 'beforeInner', false);
+initDrop('afterZone',  'afterFile',  'afterPreview',  'afterInner',  true);
+
+// ── Helpers
+function getThumb(imgEl) {
+  if (!imgEl || imgEl.classList.contains('hidden') || !imgEl.naturalWidth) return '';
+  try {
+    const maxSize = 90;
+    const ratio   = Math.min(maxSize / imgEl.naturalWidth, maxSize / imgEl.naturalHeight, 1);
+    const w = Math.round(imgEl.naturalWidth * ratio);
+    const h = Math.round(imgEl.naturalHeight * ratio);
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    c.getContext('2d').drawImage(imgEl, 0, 0, w, h);
+    return c.toDataURL('image/jpeg', 0.65);
+  } catch (_) { return ''; }
+}
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtTime(ms) {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  return m > 0 ? `${m}м ${s % 60}с` : `${s}с`;
+}
+
+// ── Multi-queue system
+// _activeJobs: Map(taskId → { modelKey, modelName, cost, prompt, thumbBefore, thumbAfter, startTime, statusText })
+// _pollTimers: Map(taskId → { pollId, tickId })
+const _activeJobs = new Map();
+const _pollTimers = new Map();
+
+async function startVideo() {
+  const beforeInput  = document.getElementById('beforeFile');
+  const beforeFile   = _droppedBefore || beforeInput.files[0];
+  if (!beforeFile) { showErr('Бастапқы фото (Before) жүктеңіз'); return; }
+
+  const btn        = document.getElementById('genBtn');
+  const submitProg = document.getElementById('submitProgress');
+  const errEl      = document.getElementById('videoError');
+
+  btn.disabled = true;
+  btn.querySelector('#genBtnText').textContent = '⏳ Жіберілуде…';
+  submitProg.classList.remove('hidden');
+  errEl.classList.add('hidden');
+
+  const thumbBefore = getThumb(document.getElementById('beforePreview'));
+  const thumbAfter  = getThumb(document.getElementById('afterPreview'));
+  const prompt      = document.getElementById('promptText').value;
+  const modelInfo   = MODELS[selectedModel] || {};
+  const costBtn     = document.querySelector('.model-chip.active');
+  const baseCost    = costBtn ? parseFloat(costBtn.dataset.cost) || 0 : 0;
+  const durMult     = parseInt(selectedDur || 5) / 5;
+  const cost        = baseCost * durMult;
+  const modelKey    = selectedModel;
+
+  const afterInput = document.getElementById('afterFile');
+  const afterFile  = _droppedAfter || afterInput.files[0] || null;
+
+  const fd = new FormData();
+  fd.append('before_photo', beforeFile);
+  if (afterFile) fd.append('after_photo', afterFile);
+  fd.append('model',        selectedModel);
+  fd.append('duration',     selectedDur);
+  fd.append('aspect_ratio', selectedAspect);
+  fd.append('prompt',       prompt);
+  fd.append('neg_prompt',   document.getElementById('negPrompt').value);
+
+  try {
+    const res  = await fetch('/api/generate-video', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.error) { showErr(data.error); return; }
+
+    const taskId = data.task_id;
+    const jobData = {
+      taskId,
+      modelKey,
+      modelName:  (modelInfo.name || 'Kling') + ' · ' + (modelInfo.tag || ''),
+      cost,
+      prompt,
+      thumbBefore,
+      thumbAfter,
+      startTime:  Date.now(),
+      statusText: 'Кезекте…',
+    };
+    _activeJobs.set(taskId, jobData);
+    savePendingToStorage();
+    renderQueue();
+
+    // Тарихқа pending күйінде қосу — баланс КЕСПЕЙМІЗ, тек сәтті болса кесіледі
+    addPendingToHistory(taskId, cost, modelKey, thumbBefore, thumbAfter, prompt);
+
+    startJobPoll(taskId);
+
+  } catch (e) {
+    showErr('Байланыс қатесі: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.querySelector('#genBtnText').textContent = '⚡ Видео жасау';
+    submitProg.classList.add('hidden');
+  }
+}
+
+function startJobPoll(taskId) {
+  let attempts = 0;
+
+  // 1-second tick for time display
+  const tickId = setInterval(() => {
+    if (!_activeJobs.has(taskId)) { clearInterval(tickId); return; }
+    renderQueue();
+  }, 1000);
+
+  // 10-second poll for status
+  const pollId = setInterval(async () => {
+    if (!_activeJobs.has(taskId)) { clearInterval(pollId); return; }
+    attempts++;
+
+    try {
+      const r    = await fetch(`/api/video-status/${taskId}`);
+      const data = await r.json();
+      const job  = _activeJobs.get(taskId);
+      if (!job) { clearInterval(pollId); return; }
+
+      if (data.error) {
+        stopJob(taskId);
+        updateHistoryStatus(taskId, 'failed');
+        showErr(data.error);
+        return;
+      }
+
+      if (data.status === 'succeed' && data.video_url) {
+        const jobCost = job.cost || 0;
+        stopJob(taskId);
+        // Баланс тек сәтті болғанда ғана шегеріледі
+        await deductBalance(jobCost);
+        updateHistoryStatus(taskId, 'success', data.video_url);
+        displayResult(data.video_url);
+        return;
+      }
+
+      if (data.status === 'failed') {
+        stopJob(taskId);
+        // Сәтсіз болса ақша кеспейміз
+        updateHistoryStatus(taskId, 'failed');
+        showErr('Видео жасалмады. Ақша шегерілмеді. Қайтадан сынап көріңіз.');
+        return;
+      }
+
+      if (data.queue_pos !== undefined) {
+        job.statusText = `Кезекте: ${data.queue_pos + 1}-орын`;
+      } else {
+        const msgs = ['Өңдеуде…', 'Фреймдер…', 'Аяқталуға жақын…'];
+        job.statusText = msgs[attempts % msgs.length];
+      }
+      renderQueue();
+    } catch (_) {}
+
+    if (attempts > 72) { stopJob(taskId); updateHistoryStatus(taskId, 'failed'); showErr('Уақыт аяқталды (12 мин).'); }
+  }, 10000);
+
+  _pollTimers.set(taskId, { pollId, tickId });
+}
+
+function stopJob(taskId) {
+  const timers = _pollTimers.get(taskId);
+  if (timers) {
+    clearInterval(timers.pollId);
+    clearInterval(timers.tickId);
+    _pollTimers.delete(taskId);
+  }
+  _activeJobs.delete(taskId);
+  savePendingToStorage();
+  renderQueue();
+}
+
+// ── Pending jobs persistence (localStorage)
+function savePendingToStorage() {
+  try {
+    const jobs = [..._activeJobs.values()].map(j => ({
+      taskId:      j.taskId,
+      modelKey:    j.modelKey,
+      modelName:   j.modelName,
+      cost:        j.cost,
+      prompt:      j.prompt,
+      thumbBefore: j.thumbBefore,
+      thumbAfter:  j.thumbAfter,
+      startTime:   j.startTime,
+    }));
+    localStorage.setItem('pendingJobs', JSON.stringify(jobs));
+  } catch (_) {}
+}
+
+function recoverPendingJobs() {
+  try {
+    // Mark history items that have been pending for >20 min as failed (server likely lost them)
+    const STALE_MS = 20 * 60 * 1000;
+    const hist = JSON.parse(localStorage.getItem('videoHistory') || '[]');
+    let changed = false;
+    hist.forEach(item => {
+      if (item.status === 'pending' && (Date.now() - item.ts) > STALE_MS) {
+        item.status = 'failed'; changed = true;
+      }
+    });
+    if (changed) {
+      try { localStorage.setItem('videoHistory', JSON.stringify(hist)); } catch (_) {}
+    }
+
+    const jobs = JSON.parse(localStorage.getItem('pendingJobs') || '[]');
+    if (!jobs.length) { if (changed) renderHistory(); return; }
+    for (const job of jobs) {
+      if (_activeJobs.has(job.taskId)) continue;
+      _activeJobs.set(job.taskId, { ...job, statusText: 'Жалғастырылуда…' });
+      startJobPoll(job.taskId);
+    }
+    if (_activeJobs.size) renderQueue();
+    if (changed) renderHistory();
+  } catch (_) {}
+}
+
+async function cancelJob(taskId) {
+  stopJob(taskId);
+  updateHistoryStatus(taskId, 'cancelled');
+  try { await fetch(`/api/cancel-video/${taskId}`, { method: 'POST' }); } catch (_) {}
+}
+
+function renderQueue() {
+  const section = document.getElementById('queueSection');
+  const list    = document.getElementById('queueList');
+  const countEl = document.getElementById('queueCount');
+
+  if (!_activeJobs.size) { section.classList.add('hidden'); return; }
+  section.classList.remove('hidden');
+  countEl.textContent = `${_activeJobs.size} жұмыс`;
+
+  list.innerHTML = [..._activeJobs.entries()].map(([taskId, job]) => {
+    const elapsed  = Date.now() - job.startTime;
+    const beforeImg = job.thumbBefore
+      ? `<img src="${job.thumbBefore}" class="h-photo" alt=""/>`
+      : `<div class="h-photo h-photo-empty">🖼</div>`;
+    const afterImg = job.thumbAfter
+      ? `<span class="h-arr">→</span><img src="${job.thumbAfter}" class="h-photo" alt=""/>`
+      : '';
+    return `<div class="queue-item">
+      <div class="h-photos">${beforeImg}${afterImg}</div>
+      <div class="q-body">
+        <span class="history-model">${esc(job.modelName)}</span>
+        <span class="q-status">${esc(job.statusText)}</span>
+      </div>
+      <span class="q-time">${fmtTime(elapsed)}</span>
+      <div class="q-spinner"></div>
+      <button class="cancel-gen-btn" onclick="cancelJob('${taskId}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// ── Result display
+function displayResult(url) {
+  document.getElementById('resultPlaceholder').classList.add('hidden');
+
+  const modelInfo = MODELS[selectedModel] || {};
+  const isEdit    = modelInfo.type === 'edit';
+
+  const videoEl = document.getElementById('resultVideo');
+  const imageEl = document.getElementById('resultImage');
+  const dlBtn   = document.getElementById('downloadBtn');
+
+  if (isEdit) {
+    imageEl.src = url;
+    imageEl.classList.remove('hidden');
+    videoEl.classList.add('hidden');
+    dlBtn.href     = `/api/download-video?url=${encodeURIComponent(url)}&name=result.jpg`;
+    dlBtn.download = 'result.jpg';
+    dlBtn.textContent = '⬇ Фото жүктеу';
+    document.getElementById('resetBtn').textContent = '🔄 Жаңа фото';
+  } else {
+    videoEl.src = url;
+    videoEl.classList.remove('hidden');
+    imageEl.classList.add('hidden');
+    dlBtn.href     = `/api/download-video?url=${encodeURIComponent(url)}&name=video.mp4`;
+    dlBtn.download = 'video.mp4';
+    dlBtn.textContent = '⬇ Жүктеп алу';
+    document.getElementById('resetBtn').textContent = '🔄 Жаңадан';
+  }
+  document.getElementById('resultActions').classList.remove('hidden');
+}
+
+function resetVideo() {
+  document.getElementById('resultVideo').classList.add('hidden');
+  document.getElementById('resultImage').classList.add('hidden');
+  document.getElementById('resultActions').classList.add('hidden');
+  document.getElementById('resultPlaceholder').classList.remove('hidden');
+}
+
+function showErr(msg) {
+  const el = document.getElementById('videoError');
+  el.textContent = '❌ ' + msg;
+  el.classList.remove('hidden');
+  if (typeof showToast === 'function') showToast(msg, 'error');
+}
+
+// ── History
+let _history = [];
+
+function addPendingToHistory(taskId, cost, modelKey, thumbBefore, thumbAfter, prompt) {
+  const modelInfo = MODELS[modelKey] || {};
+  _history = JSON.parse(localStorage.getItem('videoHistory') || '[]');
+  _history.unshift({
+    taskId,
+    status:      'pending',
+    url:         '',
+    modelName:   (modelInfo.name || 'Kling') + ' · ' + (modelInfo.tag || ''),
+    cost,
+    ts:          Date.now(),
+    thumbBefore: thumbBefore || '',
+    thumbAfter:  thumbAfter  || '',
+    prompt:      prompt      || '',
+  });
+  if (_history.length > 30) _history.splice(30);
+  try { localStorage.setItem('videoHistory', JSON.stringify(_history)); } catch (_) {}
+  renderHistory();
+}
+
+function updateHistoryStatus(taskId, status, url = '') {
+  _history = JSON.parse(localStorage.getItem('videoHistory') || '[]');
+  const item = _history.find(h => h.taskId === taskId);
+  if (item) {
+    item.status = status;
+    if (url) item.url = url;
+    try { localStorage.setItem('videoHistory', JSON.stringify(_history)); } catch (_) {}
+  }
+  renderHistory();
+}
+
+function renderHistory() {
+  _history = JSON.parse(localStorage.getItem('videoHistory') || '[]');
+  const section = document.getElementById('historySection');
+  const list    = document.getElementById('historyList');
+  if (!_history.length) { section.classList.add('hidden'); return; }
+  section.classList.remove('hidden');
+
+  list.innerHTML = _history.map((item, i) => {
+    const status = item.status || 'success'; // old items without status = success
+    const isSuccess = status === 'success';
+    const d    = new Date(item.ts);
+    const dStr = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+               + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const kzt  = status === 'success' ? Math.round((item.cost || 0) * KZT_RATE) : 0;
+    const beforeImg = item.thumbBefore
+      ? `<img src="${item.thumbBefore}" class="h-photo" alt="before"/>`
+      : `<div class="h-photo h-photo-empty">🖼</div>`;
+    const afterImg = item.thumbAfter
+      ? `<span class="h-arr">→</span><img src="${item.thumbAfter}" class="h-photo" alt="after"/>`
+      : '';
+    const promptHtml = item.prompt
+      ? `<div class="h-prompt">"${esc(item.prompt.length > 70 ? item.prompt.slice(0,70)+'…' : item.prompt)}"</div>`
+      : '';
+    const statusBadge = {
+      'pending':   '<span class="h-status h-status-pending">⏳ Күтуде</span>',
+      'success':   '',
+      'failed':    '<span class="h-status h-status-failed">❌ Сәтсіз</span>',
+      'cancelled': '<span class="h-status h-status-cancelled">🚫 Жойылды</span>',
+    }[status] || '';
+    const checkboxHtml = isSuccess
+      ? `<input type="checkbox" class="h-checkbox" data-idx="${i}" data-url="${esc(item.url)}"
+             onclick="event.stopPropagation(); updateDlBtn()"/>`
+      : `<div class="h-checkbox-placeholder"></div>`;
+    const dlUrl = `/api/download-video?url=${encodeURIComponent(item.url)}&name=video_${i+1}.mp4`;
+    const dlHtml = isSuccess
+      ? `<a href="${dlUrl}" download="video_${i+1}.mp4" class="history-dl"
+         onclick="event.stopPropagation()" title="Жүктеу">⬇</a>`
+      : '';
+    const clickAttr = isSuccess ? `onclick="playFromHistory(${i})"` : '';
+    return `<div class="history-item${isSuccess ? '' : ' h-item-nondl'}" ${clickAttr}>
+      ${checkboxHtml}
+      <div class="h-photos">${beforeImg}${afterImg}</div>
+      <div class="h-body">
+        <div class="h-top-row">
+          <span class="history-model">${esc(item.modelName)}</span>
+          ${statusBadge}
+          <span class="h-cost ${status !== 'success' ? 'h-cost-free' : ''}">${status === 'success' ? '-' : ''}${kzt.toLocaleString('ru-RU')}₸</span>
+        </div>
+        ${promptHtml}
+        <span class="history-date">${dStr}</span>
+      </div>
+      ${dlHtml}
+    </div>`;
+  }).join('');
+}
+
+function playFromHistory(i) {
+  const item = _history[i];
+  if (!item) return;
+  displayResult(item.url);
+  document.getElementById('resultVideo').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function clearHistory() {
+  localStorage.removeItem('videoHistory');
+  _history = [];
+  renderHistory();
+}
+
+// ── Bulk select/download
+function toggleSelectAll() {
+  const chk = document.getElementById('selectAllChk');
+  document.querySelectorAll('.h-checkbox').forEach(cb => cb.checked = chk.checked);
+  updateDlBtn();
+}
+
+function updateDlBtn() {
+  const n   = document.querySelectorAll('.h-checkbox:checked').length;
+  const tot = document.querySelectorAll('.h-checkbox').length;
+  const btn = document.getElementById('downloadSelectedBtn');
+  const cnt = document.getElementById('dlSelCount');
+  if (n > 0) {
+    btn.classList.remove('hidden');
+    cnt.textContent = `${n} видео`;
+  } else {
+    btn.classList.add('hidden');
+  }
+  const selAll = document.getElementById('selectAllChk');
+  if (selAll) selAll.indeterminate = n > 0 && n < tot;
+  if (selAll) selAll.checked = tot > 0 && n === tot;
+}
+
+async function downloadSelected() {
+  const boxes = [...document.querySelectorAll('.h-checkbox:checked')];
+  for (let i = 0; i < boxes.length; i++) {
+    const url  = boxes[i].dataset.url;
+    const idx  = parseInt(boxes[i].dataset.idx);
+    const a    = document.createElement('a');
+    a.href     = `/api/download-video?url=${encodeURIComponent(url)}&name=video_${idx+1}.mp4`;
+    a.download = `video_${idx+1}.mp4`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    if (i < boxes.length - 1) await new Promise(r => setTimeout(r, 1000));
+  }
+}
+
+loadBalance();
+renderHistory();
+recoverPendingJobs();
+updateChipCosts();
+</script>
+{% endblock %}

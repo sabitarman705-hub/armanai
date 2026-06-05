@@ -1,0 +1,27 @@
+# Құпия кілттер — ЕШҚАШАН GitHub-қа жүктелмейді
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Жүктелген суреттер (ауыр файлдар)
+static/uploads/*
+!static/uploads/.gitkeep
+
+# Дерекқор (жергілікті)
+users.db
+
+# Тапсырмалар кэші
+tasks_cache.json
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db

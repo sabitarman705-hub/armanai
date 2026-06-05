@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Төлем сәтті өтті — ArmanAI{% endblock %}
+
+{% block content %}
+<style>
+.success-wrap {
+  max-width: 440px;
+  margin: 5rem auto;
+  padding: 0 1rem;
+  text-align: center;
+}
+.success-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+.success-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2.5rem 2rem;
+}
+.success-card h1 {
+  font-size: 1.5rem;
+  margin-bottom: .6rem;
+  color: var(--success);
+}
+.success-card p {
+  color: var(--muted);
+  margin-bottom: .5rem;
+  font-size: .95rem;
+}
+.success-balance {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--success);
+  margin: 1rem 0 1.6rem;
+}
+.success-actions {
+  display: flex;
+  gap: .75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.btn-primary {
+  background: var(--accent);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: .95rem;
+  font-weight: 600;
+  padding: .7rem 1.4rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn-outline {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: .95rem;
+  padding: .7rem 1.4rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.pending-note {
+  margin-top: 1.2rem;
+  font-size: .82rem;
+  color: var(--muted);
+}
+</style>
+
+<div class="success-wrap">
+  <div class="success-card">
+    <div class="success-icon">✅</div>
+    <h1>Төлем сәтті өтті!</h1>
+
+    {% if credited > 0 %}
+    <p>Балансыңызға <strong style="color:var(--text)">${{ '%.2f'|format(credited) }}</strong> қосылды.</p>
+    {% else %}
+    <p>Төлемді растау бірнеше секунд ішінде аяқталады.</p>
+    {% endif %}
+
+    <div class="success-balance">${{ balance }}</div>
+
+    <div class="success-actions">
+      <a href="/video" class="btn-primary">Видео жасау →</a>
+      <a href="/topup" class="btn-outline">Тағы толтыру</a>
+    </div>
+
+    <p class="pending-note">
+      Баланс жаңартылмаса бетті жаңартып көріңіз — жүйе бірнеше секундта синхрондалады.
+    </p>
+  </div>
+</div>
+{% endblock %}

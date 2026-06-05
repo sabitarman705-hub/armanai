@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}ArmanAI — Басты бет{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero-text">
+    <div class="hero-badge">fal.ai · Kling AI</div>
+    <h1 class="hero-title">ArmanAI Studio</h1>
+    <p class="hero-sub">Ескі фотоларды жақсарт. Кинематографиялық before/after видео жаса.</p>
+  </div>
+</section>
+
+<div class="cards-grid">
+  <a href="/restore" class="feature-card">
+    <div class="card-icon">🖼️</div>
+    <h2>Фото жақсарту</h2>
+    <p>Ескі, бұлдыр немесе зақымдалған суреттерді жергілікті AI арқылы жақсарт — тазарту, анықтау, 2× үлкейту.</p>
+    <span class="card-btn">Бастау →</span>
+  </a>
+
+  <a href="/video" class="feature-card">
+    <div class="card-icon">🎬</div>
+    <h2>Before / After Видео</h2>
+    <p>Фотоны жүктеп, Kling AI v1–v3 · Seedance модельдерімен кинематографиялық видео жаса.</p>
+    <span class="card-btn">Бастау →</span>
+  </a>
+
+</div>
+{% endblock %}

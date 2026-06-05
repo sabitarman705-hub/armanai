@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ArmanAI — {% if mode == 'register' %}Тіркелу{% else %}Кіру{% endif %}</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #0d0f1a;
+      --surface: #141828;
+      --surface2:#1c2238;
+      --border:  #2a3050;
+      --accent:  #7c5ef0;
+      --accent2: #5b9cf0;
+      --text:    #e8eaf6;
+      --muted:   #8892b0;
+      --error:   #f87171;
+      --success: #4ade80;
+      --radius:  16px;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    /* Фон gradient blob */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 400px;
+      background: radial-gradient(ellipse, rgba(124,94,240,.18) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .auth-wrap {
+      width: 100%;
+      max-width: 420px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Логотип */
+    .auth-logo {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .auth-logo-icon {
+      font-size: 2.8rem;
+      display: block;
+      margin-bottom: .4rem;
+      filter: drop-shadow(0 0 18px rgba(124,94,240,.6));
+    }
+    .auth-logo-name {
+      font-size: 1.6rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff 30%, var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .auth-logo-sub {
+      font-size: .82rem;
+      color: var(--muted);
+      margin-top: .2rem;
+    }
+
+    /* Карточка */
+    .auth-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: 0 8px 40px rgba(0,0,0,.5);
+    }
+
+    /* Tabs */
+    .auth-tabs {
+      display: flex;
+      gap: .35rem;
+      margin-bottom: 1.8rem;
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: .3rem;
+    }
+    .auth-tab {
+      flex: 1;
+      text-align: center;
+      padding: .55rem;
+      border-radius: 8px;
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      text-decoration: none;
+      transition: all .2s;
+    }
+    .auth-tab.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    }
+
+    /* Form */
+    .auth-form { display: flex; flex-direction: column; gap: 1rem; }
+
+    .field { display: flex; flex-direction: column; gap: .4rem; }
+    .field label { font-size: .82rem; color: var(--muted); font-weight: 500; }
+    .field input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      padding: .75rem 1rem;
+      font-size: .95rem;
+      font-family: inherit;
+      transition: border-color .2s, box-shadow .2s;
+      width: 100%;
+    }
+    .field input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124,94,240,.15);
+    }
+    .field input::placeholder { color: var(--muted); opacity: .6; }
+
+    /* Error */
+    .auth-error {
+      background: rgba(248,113,113,.1);
+      border: 1px solid rgba(248,113,113,.3);
+      color: var(--error);
+      padding: .7rem 1rem;
+      border-radius: 9px;
+      font-size: .85rem;
+    }
+
+    /* Button */
+    .auth-btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      border: none;
+      border-radius: 11px;
+      padding: .85rem;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity .2s, transform .1s;
+      letter-spacing: .02em;
+      margin-top: .4rem;
+    }
+    .auth-btn:hover    { opacity: .9; transform: translateY(-1px); }
+    .auth-btn:active   { transform: translateY(0); }
+
+    /* Footer note */
+    .auth-note {
+      text-align: center;
+      font-size: .78rem;
+      color: var(--muted);
+      margin-top: 1.2rem;
+    }
+    .auth-note a { color: var(--accent2); }
+
+    /* Hint */
+    .field-hint { font-size: .74rem; color: var(--muted); margin-top: -.2rem; }
+
+    /* Google button */
+    .google-btn {
+      display: flex; align-items: center; justify-content: center; gap: .7rem;
+      background: #fff; color: #1f1f1f;
+      border: 1px solid #dadce0; border-radius: 11px;
+      padding: .75rem 1rem; font-size: .95rem; font-weight: 600;
+      font-family: inherit; text-decoration: none;
+      transition: box-shadow .2s, background .2s;
+      margin-bottom: .2rem;
+    }
+    .google-btn:hover {
+      box-shadow: 0 2px 12px rgba(0,0,0,.18);
+      background: #f8f8f8;
+    }
+
+    /* Divider */
+    .divider {
+      display: flex; align-items: center; gap: .8rem;
+      margin: 1rem 0; color: var(--muted); font-size: .8rem;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<div class="auth-wrap">
+
+  <!-- Logo -->
+  <div class="auth-logo">
+    <span class="auth-logo-icon">✦</span>
+    <div class="auth-logo-name">ArmanAI</div>
+    <div class="auth-logo-sub">AI Фото &amp; Видео Студия</div>
+  </div>
+
+  <!-- Card -->
+  <div class="auth-card">
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <a href="/login"    class="auth-tab {% if mode == 'login'    %}active{% endif %}">Кіру</a>
+      <a href="/register" class="auth-tab {% if mode == 'register' %}active{% endif %}">Тіркелу</a>
+    </div>
+
+    <!-- Error -->
+    {% if error %}
+    <div class="auth-error" style="margin-bottom:1rem">⚠️ {{ error }}</div>
+    {% endif %}
+
+    <!-- Google button (екі режимде де) -->
+    <a href="/auth/google" class="google-btn">
+      <svg width="18" height="18" viewBox="0 0 48 48">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      </svg>
+      Google арқылы {% if mode == 'register' %}тіркелу{% else %}кіру{% endif %}
+    </a>
+
+    <div class="divider"><span>немесе</span></div>
+
+    {% if mode == 'login' %}
+    <!-- LOGIN -->
+    <form class="auth-form" method="POST" action="/login">
+      <div class="field">
+        <label>Аты (username)</label>
+        <input type="text" name="username" placeholder="arman123" required autofocus autocomplete="username"/>
+      </div>
+      <div class="field">
+        <label>Пароль</label>
+        <input type="password" name="password" placeholder="••••••••" required autocomplete="current-password"/>
+      </div>
+      <button type="submit" class="auth-btn">→ Кіру</button>
+    </form>
+    <div class="auth-note">Аккаунт жоқ па? <a href="/register">Тіркелу</a></div>
+
+    {% else %}
+    <!-- REGISTER -->
+    <form class="auth-form" method="POST" action="/register">
+      <div class="field">
+        <label>Аты (username)</label>
+        <input type="text" name="username" placeholder="arman123" required autofocus
+               minlength="3" autocomplete="username"/>
+        <span class="field-hint">Кем дегенде 3 таңба, латын әріптері</span>
+      </div>
+      <div class="field">
+        <label>Пароль</label>
+        <input type="password" name="password" placeholder="••••••••" required
+               minlength="6" autocomplete="new-password"/>
+        <span class="field-hint">Кем дегенде 6 таңба</span>
+      </div>
+      <div class="field">
+        <label>Парольді растау</label>
+        <input type="password" name="confirm" placeholder="••••••••" required
+               minlength="6" autocomplete="new-password"/>
+      </div>
+      <button type="submit" class="auth-btn">✦ Аккаунт жасау</button>
+    </form>
+    <div class="auth-note">Аккаунт бар ма? <a href="/login">Кіру</a></div>
+    {% endif %}
+
+    {% if request.args.get('error') == 'google' %}
+    <div class="auth-error" style="margin-top:.8rem">⚠️ Google арқылы кіру сәтсіз болды. Қайтадан сынаңыз.</div>
+    {% endif %}
+
+  </div>
+</div>
+
+</body>
+</html>

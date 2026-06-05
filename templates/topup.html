@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}Баланс толтыру — ArmanAI{% endblock %}
+
+{% block content %}
+<style>
+.topup-wrap {
+  max-width: 480px;
+  margin: 3rem auto;
+  padding: 0 1rem;
+}
+.topup-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem;
+}
+.topup-card h1 {
+  font-size: 1.4rem;
+  margin-bottom: .4rem;
+}
+.topup-balance {
+  color: var(--muted);
+  font-size: .95rem;
+  margin-bottom: 1.8rem;
+}
+.topup-balance strong {
+  color: var(--success);
+  font-size: 1.1rem;
+}
+.amounts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: .75rem;
+  margin-bottom: 1.2rem;
+}
+.amount-btn {
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: .9rem;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+.amount-btn:hover,
+.amount-btn.selected {
+  border-color: var(--accent);
+  background: rgba(124,94,240,.15);
+}
+.custom-row {
+  display: flex;
+  gap: .6rem;
+  margin-bottom: 1.6rem;
+}
+.custom-input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 1rem;
+  padding: .6rem 1rem;
+  outline: none;
+}
+.custom-input:focus { border-color: var(--accent); }
+.custom-input::placeholder { color: var(--muted); }
+.pay-btn {
+  width: 100%;
+  background: var(--accent);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 600;
+  padding: .85rem;
+  cursor: pointer;
+  transition: opacity .2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+}
+.pay-btn:disabled { opacity: .5; cursor: not-allowed; }
+.stripe-note {
+  margin-top: 1rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: .82rem;
+}
+.stripe-note svg { vertical-align: middle; margin-right: 4px; }
+.canceled-msg {
+  background: rgba(248,113,113,.12);
+  border: 1px solid var(--error);
+  border-radius: 8px;
+  color: var(--error);
+  padding: .7rem 1rem;
+  margin-bottom: 1.2rem;
+  font-size: .93rem;
+}
+.no-stripe-msg {
+  background: rgba(248,113,113,.1);
+  border: 1px solid var(--error);
+  border-radius: 8px;
+  color: var(--error);
+  padding: 1rem;
+  font-size: .9rem;
+  line-height: 1.6;
+}
+.no-stripe-msg code { color: #fca5a5; }
+</style>
+
+<div class="topup-wrap">
+  <div class="topup-card">
+    <h1>Баланс толтыру</h1>
+    <p class="topup-balance">Қазіргі баланс: <strong>${{ balance }}</strong></p>
+
+    {% if request.args.get('canceled') %}
+    <div class="canceled-msg">Төлем болдырылмады. Қайталап көруіңізге болады.</div>
+    {% endif %}
+
+    {% if not stripe_configured %}
+    <div class="no-stripe-msg">
+      <strong>Stripe баптанмаған.</strong><br>
+      <code>.env</code> файлына мынаны қосыңыз:<br><br>
+      <code>STRIPE_SECRET_KEY=sk_live_...</code><br>
+      <code>STRIPE_WEBHOOK_SECRET=whsec_...</code><br><br>
+      Кілттерді <a href="https://dashboard.stripe.com/apikeys" target="_blank" style="color:#93c5fd">dashboard.stripe.com/apikeys</a> сайтынан алуға болады.
+    </div>
+    {% else %}
+
+    <div class="amounts-grid">
+      {% for a in amounts %}
+      <button class="amount-btn" onclick="selectAmount({{ a }}, this)">$ {{ a }}</button>
+      {% endfor %}
+    </div>
+
+    <div class="custom-row">
+      <input class="custom-input" id="customAmt" type="number" min="1" max="500"
+             placeholder="Өз сомаңызды енгізіңіз ($)" oninput="onCustomInput()"/>
+    </div>
+
+    <button class="pay-btn" id="payBtn" onclick="startCheckout()" disabled>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+      </svg>
+      Карточкамен төлеу
+    </button>
+
+    <p class="stripe-note">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      Stripe арқылы қауіпсіз төлем. Карта деректері сайтқа сақталмайды.
+    </p>
+
+    {% endif %}
+  </div>
+</div>
+
+<script>
+let selectedAmt = 0;
+
+function selectAmount(val, el) {
+  document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('customAmt').value = '';
+  selectedAmt = val;
+  updatePayBtn();
+}
+
+function onCustomInput() {
+  document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('selected'));
+  const v = parseFloat(document.getElementById('customAmt').value);
+  selectedAmt = (!isNaN(v) && v >= 1 && v <= 500) ? v : 0;
+  updatePayBtn();
+}
+
+function updatePayBtn() {
+  const btn = document.getElementById('payBtn');
+  if (!btn) return;
+  btn.disabled = selectedAmt <= 0;
+  btn.textContent = selectedAmt > 0
+    ? `$${selectedAmt.toFixed(2)} төлеу — Stripe`
+    : 'Карточкамен төлеу';
+}
+
+async function startCheckout() {
+  if (selectedAmt <= 0) return;
+  const btn = document.getElementById('payBtn');
+  btn.disabled = true;
+  btn.textContent = 'Жүктелуде…';
+  try {
+    const res  = await fetch('/api/create-checkout', {
+      method:  'POST',
+      headers: {'Content-Type': 'application/json'},
+      body:    JSON.stringify({ amount: selectedAmt }),
+    });
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      showToast(data.error || 'Қате орын алды', 'error');
+      btn.disabled = false;
+      updatePayBtn();
+    }
+  } catch(e) {
+    showToast('Байланыс қатесі', 'error');
+    btn.disabled = false;
+    updatePayBtn();
+  }
+}
+</script>
+{% endblock %}
