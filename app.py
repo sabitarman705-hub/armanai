@@ -95,7 +95,8 @@ RESTORE_MODELS = {
     'full':    'Толық өңдеу (ең жақсы)',
 }
 
-_TASKS_FILE = os.path.join(os.path.dirname(__file__), 'tasks_cache.json')
+_DATA_DIR   = os.path.dirname(os.getenv('DB_PATH', os.path.join(os.path.dirname(__file__), 'users.db')))
+_TASKS_FILE = os.path.join(_DATA_DIR, 'tasks_cache.json')
 _tasks_lock = threading.Lock()
 
 def _load_tasks() -> dict:
