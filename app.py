@@ -220,6 +220,7 @@ def register():
         elif password != confirm:
             error = 'Парольдер сәйкес келмейді'
         else:
+            db = None
             try:
                 db = _db()
                 db.execute('INSERT INTO users (username, password) VALUES (?,?)',
@@ -232,7 +233,7 @@ def register():
                 session['avatar']   = ''
                 return redirect('/')
             except sqlite3.IntegrityError:
-                db.close()
+                if db: db.close()
                 error = 'Бұл атпен аккаунт бар, басқа ат таңда'
     return render_template('auth.html', mode='register', error=error)
 
@@ -507,6 +508,7 @@ def api_video_status(task_id):
 
         if isinstance(status, fal_client.Completed):
             if status.error:
+                print(f'[FAL ERROR] task={task_id} error={status.error}')
                 db = _db()
                 db.execute('UPDATE users SET balance = balance + ? WHERE id=?',
                            (task['cost'], task['user_id']))
@@ -515,13 +517,22 @@ def api_video_status(task_id):
                 with _tasks_lock:
                     _tasks.pop(task_id, None)
                     _persist_tasks()
-                return jsonify({'status': 'failed', 'video_url': '', 'error_msg': status.error})
+                return jsonify({'status': 'failed', 'video_url': '', 'error_msg': str(status.error)})
 
             result = fal_client.result(model_id, fal_rid)
+            print(f'[FAL RESULT] task={task_id} result_keys={list(result.keys()) if isinstance(result, dict) else type(result)}')
             url    = _extract_output_url(result)
+            print(f'[FAL URL] task={task_id} url={url}')
             with _tasks_lock:
                 _tasks.pop(task_id, None)
                 _persist_tasks()
+            if not url:
+                db = _db()
+                db.execute('UPDATE users SET balance = balance + ? WHERE id=?',
+                           (task['cost'], task['user_id']))
+                db.commit()
+                db.close()
+                return jsonify({'status': 'failed', 'video_url': '', 'error_msg': 'URL табылмады'})
             return jsonify({'status': 'succeed', 'video_url': url})
 
         if isinstance(status, fal_client.Queued):
@@ -624,8 +635,12 @@ def payment_success():
     if sid and stripe.api_key:
         try:
             sess     = stripe.checkout.Session.retrieve(sid)
-            if sess.payment_status == 'paid' and str(sess.metadata.get('user_id')) == str(session['user_id']):
-                credited = float(sess.metadata.get('amount_usd', 0))
+            if sess.payment_status == 'paid':
+                try:
+                    if sess.metadata['user_id'] == str(session['user_id']):  # type: ignore[index]
+                        credited = float(sess.metadata['amount_usd'] or 0)  # type: ignore[index]
+                except (KeyError, TypeError, ValueError):
+                    pass
         except Exception:
             pass
     db  = _db()
@@ -643,7 +658,7 @@ def stripe_webhook():
 
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
-    except (ValueError, stripe.error.SignatureVerificationError):
+    except (ValueError, stripe.SignatureVerificationError):  # type: ignore[attr-defined]
         return 'Invalid signature', 400
 
     if event['type'] == 'checkout.session.completed':
