@@ -140,7 +140,14 @@ def compress_for_api(filepath, max_dim=1024, quality=82):
     return f'data:image/jpeg;base64,{b64}'
 
 
-def _extract_output_url(data: dict) -> str:
+def _extract_output_url(data) -> str:
+    if not isinstance(data, dict):
+        if hasattr(data, 'model_dump'):
+            data = data.model_dump()
+        elif hasattr(data, '__dict__'):
+            data = vars(data)
+        else:
+            return ''
     for field in ('video', 'image', 'output'):
         val = data.get(field)
         if isinstance(val, dict):
@@ -507,8 +514,9 @@ def api_video_status(task_id):
         status = fal_client.status(model_id, fal_rid, with_logs=False)
 
         if isinstance(status, fal_client.Completed):
-            if status.error:
-                print(f'[FAL ERROR] task={task_id} error={status.error}')
+            err = getattr(status, 'error', None)
+            if err:
+                print(f'[FAL ERROR] task={task_id} error={err}')
                 db = _db()
                 db.execute('UPDATE users SET balance = balance + ? WHERE id=?',
                            (task['cost'], task['user_id']))
@@ -517,11 +525,16 @@ def api_video_status(task_id):
                 with _tasks_lock:
                     _tasks.pop(task_id, None)
                     _persist_tasks()
-                return jsonify({'status': 'failed', 'video_url': '', 'error_msg': str(status.error)})
+                return jsonify({'status': 'failed', 'video_url': '', 'error_msg': str(err)})
 
-            result = fal_client.result(model_id, fal_rid)
-            print(f'[FAL RESULT] task={task_id} result_keys={list(result.keys()) if isinstance(result, dict) else type(result)}')
-            url    = _extract_output_url(result)
+            try:
+                result = fal_client.result(model_id, fal_rid)
+            except Exception as result_err:
+                print(f'[FAL RESULT FETCH ERROR] task={task_id} error={result_err}')
+                result = getattr(status, 'result', None)
+
+            print(f'[FAL RESULT] task={task_id} type={type(result)} keys={list(result.keys()) if isinstance(result, dict) else "n/a"}')
+            url = _extract_output_url(result) if result is not None else ''
             print(f'[FAL URL] task={task_id} url={url}')
             with _tasks_lock:
                 _tasks.pop(task_id, None)
@@ -536,11 +549,13 @@ def api_video_status(task_id):
             return jsonify({'status': 'succeed', 'video_url': url})
 
         if isinstance(status, fal_client.Queued):
-            return jsonify({'status': 'processing', 'queue_pos': status.position})
+            return jsonify({'status': 'processing', 'queue_pos': getattr(status, 'position', 0)})
 
         return jsonify({'status': 'processing', 'video_url': ''})
 
     except Exception as e:
+        import traceback
+        print(f'[STATUS ERROR] task={task_id}\n{traceback.format_exc()}')
         return jsonify({'error': str(e)}), 500
 
 
@@ -552,6 +567,13 @@ def api_cancel_video(task_id):
         _persist_tasks()
     if not task:
         return jsonify({'success': True})
+    # Балансты қайтар
+    if task.get('cost') and task.get('user_id') == session.get('user_id'):
+        db = _db()
+        db.execute('UPDATE users SET balance = balance + ? WHERE id=?',
+                   (task['cost'], task['user_id']))
+        db.commit()
+        db.close()
     try:
         fal_client.cancel(task['model_id'], task['fal_rid'])
     except Exception:

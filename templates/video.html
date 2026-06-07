@@ -2,207 +2,855 @@
 {% block title %}ArmanAI — Video Studio{% endblock %}
 
 {% block content %}
-<div class="studio-wrap">
+<style>
+/* ═══════════════════════════════════════════════════
+   VIDEO STUDIO — new interface
+═══════════════════════════════════════════════════ */
+.vs-root {
+  display: flex;
+  gap: 20px;
+  padding: 20px 24px;
+  min-height: calc(100vh - 62px - 48px);
+  align-items: flex-start;
+}
 
-  <!-- ── Header ── -->
-  <div class="studio-header">
-    <h1 class="studio-title">🎬 Video Studio</h1>
-    <p class="studio-sub">ArmanAI · fal.ai + Kling AI</p>
-  </div>
+/* ── Left panel ──────────────────────────────────── */
+.vs-panel {
+  width: 320px;
+  min-width: 300px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
 
-  <!-- ── Balance bar ── -->
-  <div class="balance-bar">
-    <div class="balance-left">
-      <span class="balance-label">💰 Баланс:</span>
-      <span class="balance-dollar">$</span>
-      <span id="balanceDisplay" class="balance-amount">0.00</span>
-      <span id="balanceKzt" class="balance-kzt">≈ 0 ₸</span>
-      <button class="topup-btn" onclick="openTopup()">+ Кредит қосу</button>
+/* Tab bar */
+.vs-tabs {
+  display: flex;
+  background: #0d1120;
+  padding: 6px 8px;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+}
+.vs-tab {
+  flex: 1;
+  padding: 7px 4px;
+  font-size: .8rem;
+  font-weight: 500;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .18s;
+  text-decoration: none;
+  text-align: center;
+  display: block;
+}
+.vs-tab:hover { color: var(--text); background: var(--surface2); text-decoration: none; }
+.vs-tab.active {
+  color: var(--text);
+  background: var(--surface2);
+  font-weight: 600;
+}
+
+/* Header */
+.vs-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.vs-back {
+  font-size: .72rem;
+  color: var(--muted);
+  margin-bottom: 3px;
+  display: block;
+}
+.vs-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.vs-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.vs-help {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--muted);
+  font-size: .65rem;
+  color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  cursor: help;
+}
+.vs-templates-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: .75rem;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all .18s;
+  white-space: nowrap;
+}
+.vs-templates-btn:hover { background: var(--border); }
+
+/* Balance */
+.vs-balance-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #0d1120;
+  border-bottom: 1px solid var(--border);
+  font-size: .8rem;
+}
+.vs-bal-icon { font-size: .9rem; }
+.vs-bal-amount { font-weight: 700; color: var(--success); }
+.vs-bal-kzt { color: var(--muted); font-size: .75rem; }
+.vs-bal-add {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--accent2);
+  font-size: .72rem;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all .18s;
+}
+.vs-bal-add:hover { background: var(--surface2); border-color: var(--accent2); }
+
+/* Section */
+.vs-section {
+  padding: 14px 16px 0;
+}
+.vs-section:last-of-type { padding-bottom: 14px; }
+
+.vs-sec-label {
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.vs-sec-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.vs-shot-add {
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--muted);
+  font-size: .9rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.vs-shot-add:hover { color: var(--text); border-color: var(--accent2); }
+
+/* MODEL dropdown */
+.vs-model-wrap { position: relative; }
+.vs-model-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: .85rem;
+  color: var(--text);
+  transition: border-color .18s;
+}
+.vs-model-select:hover { border-color: var(--accent2); }
+.vs-model-gear { font-size: 1rem; }
+.vs-model-cost { margin-left: auto; font-size: .72rem; color: var(--muted); }
+.vs-chevron { font-size: .75rem; color: var(--muted); margin-left: 4px; transition: transform .18s; }
+.vs-model-wrap.open .vs-chevron { transform: rotate(90deg); }
+
+.vs-model-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  z-index: 50;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  max-height: 260px;
+  overflow-y: auto;
+}
+.vs-model-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 12px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: .82rem;
+  cursor: pointer;
+  transition: background .15s;
+  text-align: left;
+}
+.vs-model-opt:last-child { border-bottom: none; }
+.vs-model-opt:hover { background: var(--surface2); }
+.vs-model-opt.active { background: rgba(92, 124, 240, 0.12); color: var(--accent2); }
+.vs-opt-tag { color: var(--muted); font-size: .75rem; margin-left: 4px; }
+.vs-opt-cost { font-size: .72rem; color: var(--muted); flex-shrink: 0; }
+
+/* REFERENCES cards */
+.vs-refs-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.vs-ref-card {
+  position: relative;
+  aspect-ratio: 1;
+  background: var(--surface2);
+  border: 1.5px dashed var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color .18s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vs-ref-card:hover { border-color: var(--accent2); }
+.vs-ref-card.vs-dz-over { border-color: var(--accent); border-style: solid; }
+.vs-ref-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+.vs-ref-ico {
+  font-size: 1.4rem;
+  color: var(--muted);
+}
+.vs-ref-lbl {
+  font-size: .72rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+.vs-ref-preview {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  position: absolute;
+  inset: 0;
+}
+.vs-ref-clear {
+  position: absolute;
+  top: 5px; right: 5px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.7);
+  color: #fff;
+  font-size: .7rem;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+.vs-ref-clear:hover { background: rgba(248,113,113,.8); }
+
+/* Media row */
+.vs-media-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+.vs-media-icon {
+  font-size: 1rem;
+  color: var(--muted);
+  cursor: default;
+  transition: color .15s;
+}
+.vs-media-icon:hover { color: var(--text); }
+.vs-media-add {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: .75rem;
+  cursor: pointer;
+  transition: color .15s;
+}
+.vs-media-add:hover { color: var(--accent2); }
+
+/* SHOT prompt */
+.vs-shot-box {
+  position: relative;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color .18s;
+}
+.vs-shot-box:focus-within { border-color: var(--accent2); }
+.vs-prompt {
+  width: 100%;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: .82rem;
+  font-family: inherit;
+  resize: none;
+  padding: 10px 12px 30px;
+  line-height: 1.5;
+}
+.vs-prompt::placeholder { color: var(--muted); }
+.vs-shot-btns {
+  position: absolute;
+  bottom: 6px; right: 8px;
+  display: flex;
+  gap: 4px;
+}
+.vs-shot-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: .85rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color .15s;
+}
+.vs-shot-btn:hover { color: var(--text); }
+
+/* Neg input */
+.vs-neg-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: .78rem;
+  padding: 7px 10px;
+  outline: none;
+  font-family: inherit;
+}
+.vs-neg-input:focus { border-color: var(--accent2); }
+.vs-neg-input::placeholder { color: var(--muted); }
+
+/* Bottom controls */
+.vs-ctrl-row {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+}
+.vs-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .18s;
+  white-space: nowrap;
+}
+.vs-chip:hover { border-color: var(--accent2); color: var(--text); }
+.vs-chip.active { color: var(--text); border-color: #3a4060; }
+
+/* Generate button */
+.vs-gen-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: calc(100% - 32px);
+  margin: 0 16px 16px;
+  padding: 12px 18px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: .95rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all .2s;
+}
+.vs-gen-btn:hover:not(:disabled) {
+  background: rgba(92, 124, 240, 0.15);
+  border-color: var(--accent2);
+}
+.vs-gen-btn:disabled { opacity: .55; cursor: not-allowed; }
+.vs-gen-star { font-size: 1rem; color: var(--accent2); }
+
+/* Error */
+.vs-error-msg {
+  margin: 0 16px 14px;
+  padding: 8px 12px;
+  background: rgba(248,113,113,.1);
+  border: 1px solid rgba(248,113,113,.3);
+  border-radius: 8px;
+  color: var(--error);
+  font-size: .8rem;
+}
+
+/* ── Right result area ───────────────────────────── */
+.vs-right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.vs-result-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.vs-result-ph {
+  text-align: center;
+  padding: 60px 20px;
+}
+.vs-ph-icon { font-size: 3.5rem; margin-bottom: 14px; }
+.vs-ph-text { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.vs-ph-hint { font-size: .82rem; color: var(--muted); }
+
+.vs-video {
+  width: 100%;
+  max-height: 520px;
+  object-fit: contain;
+  background: #000;
+  display: block;
+}
+.vs-result-actions {
+  display: flex;
+  gap: 10px;
+  padding: 14px;
+  width: 100%;
+  border-top: 1px solid var(--border);
+}
+.vs-dl-btn {
+  padding: 9px 18px;
+  border-radius: 9px;
+  font-size: .85rem;
+  font-weight: 600;
+  background: var(--accent2);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity .18s;
+}
+.vs-dl-btn:hover { opacity: .85; text-decoration: none; }
+.vs-dl-btn.vs-sec {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+/* Queue */
+.vs-queue {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.vs-queue-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: .85rem;
+  font-weight: 600;
+}
+.vs-badge {
+  background: var(--accent);
+  color: #fff;
+  font-size: .7rem;
+  padding: 2px 7px;
+  border-radius: 12px;
+}
+.vs-q-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.vs-q-item:last-child { border-bottom: none; }
+.vs-q-photos { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.vs-q-thumb { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; }
+.vs-q-empty { background: var(--surface2); display:flex; align-items:center; justify-content:center; font-size:.9rem; color:var(--muted); }
+.vs-q-arr { color: var(--muted); font-size: .85rem; }
+.vs-q-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.vs-q-model { font-size: .8rem; font-weight: 600; color: var(--text); }
+.vs-q-status { font-size: .75rem; color: var(--muted); }
+.vs-q-time { font-size: .75rem; color: var(--muted); flex-shrink: 0; }
+.vs-q-cancel {
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  color: var(--muted); font-size: .75rem; padding: 3px 7px; cursor: pointer;
+  transition: all .15s; flex-shrink: 0;
+}
+.vs-q-cancel:hover { background: rgba(248,113,113,.1); border-color: var(--error); color: var(--error); }
+.vs-q-spinner {
+  width: 16px; height: 16px; flex-shrink: 0;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent2);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* History */
+.vs-history {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.vs-history-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: .85rem;
+  font-weight: 600;
+  gap: 8px;
+}
+.vs-history-hdr > div {
+  display: flex; align-items: center; gap: 8px;
+}
+.vs-h-dl {
+  background: var(--accent2);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: .72rem;
+  padding: 4px 9px;
+  cursor: pointer;
+}
+.vs-sel-all { font-size: .75rem; color: var(--muted); cursor: pointer; display: flex; align-items: center; gap: 4px; }
+.vs-h-clear {
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  color: var(--muted); font-size: .72rem; padding: 3px 8px; cursor: pointer;
+  transition: all .15s;
+}
+.vs-h-clear:hover { border-color: var(--error); color: var(--error); }
+
+.vs-h-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .15s;
+}
+.vs-h-item:last-child { border-bottom: none; }
+.vs-h-item:hover { background: var(--surface2); }
+.vs-h-nondl { cursor: default; }
+.vs-h-nondl:hover { background: none; }
+.vs-h-photos { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.vs-h-thumb { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; }
+.vs-h-empty { background: var(--surface2); display:flex;align-items:center;justify-content:center;font-size:.9rem;color:var(--muted); }
+.vs-h-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.vs-h-top { display: flex; align-items: center; gap: 6px; }
+.vs-h-model { font-size: .8rem; font-weight: 600; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vs-h-cost { font-size: .75rem; color: var(--error); flex-shrink: 0; }
+.vs-h-cost.free { color: var(--muted); }
+.vs-h-prompt { font-size: .72rem; color: var(--muted); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vs-h-date { font-size: .7rem; color: var(--muted); }
+.vs-h-chk { cursor: pointer; flex-shrink: 0; }
+.vs-h-dl-btn { font-size: 1rem; color: var(--muted); text-decoration: none; transition: color .15s; flex-shrink: 0; }
+.vs-h-dl-btn:hover { color: var(--accent2); text-decoration: none; }
+.vs-hbadge { font-size: .8rem; flex-shrink: 0; }
+
+/* Modal */
+.vs-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.65);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+}
+.vs-modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  width: 320px;
+  box-shadow: var(--shadow);
+}
+.vs-modal-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
+.vs-modal-sub { font-size: .8rem; color: var(--muted); margin-bottom: 18px; line-height: 1.5; }
+.vs-modal-row { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+.vs-modal-dollar { font-size: 1.1rem; font-weight: 700; color: var(--success); }
+.vs-modal-input {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: .9rem;
+  padding: 8px 12px; outline: none; font-family: inherit;
+}
+.vs-modal-input:focus { border-color: var(--accent2); }
+.vs-modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.vs-modal-cancel {
+  padding: 8px 16px; border-radius: 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--muted); font-size: .85rem; cursor: pointer;
+}
+.vs-modal-ok {
+  padding: 8px 16px; border-radius: 8px;
+  background: var(--accent2); border: none;
+  color: #fff; font-size: .85rem; font-weight: 600; cursor: pointer;
+}
+
+.hidden { display: none !important; }
+
+/* Responsive */
+@media (max-width: 700px) {
+  .vs-root { flex-direction: column; padding: 12px; }
+  .vs-panel { width: 100%; min-width: 0; }
+}
+</style>
+
+<div class="vs-root">
+
+  <!-- ── Left control panel ─────────────────────────── -->
+  <div class="vs-panel">
+
+    <!-- Tab bar -->
+    <div class="vs-tabs">
+      <a href="/" class="vs-tab">Image</a>
+      <span class="vs-tab active">Video</span>
+      <a href="/restore" class="vs-tab">Restore</a>
     </div>
-    <div class="balance-right">
-      <span class="balance-label">Таңдалған модель:</span>
-      <span id="modelCostLabel" class="gen-count" style="font-size:.82rem"></span>
-      <span class="balance-label">·</span>
-      <span id="genCount" class="gen-count">~0 видео</span>
-    </div>
-  </div>
 
-  <!-- Кредит қосу модалы -->
-  <div id="topupModal" class="modal-overlay hidden" onclick="closeTopupOutside(event)">
-    <div class="modal-box">
-      <div class="modal-title">💳 Кредит қосу</div>
-      <p class="modal-sub">fal.ai аккаунтыңдағы балансты осында енгіз. Видео сәтті жасалғанда автоматты шегеріледі.</p>
-      <div class="modal-row">
-        <span class="modal-dollar">$</span>
-        <input type="number" id="topupInput" class="modal-input" placeholder="0.00" step="0.01" min="0"/>
-      </div>
-      <div class="modal-actions">
-        <button class="modal-btn-cancel" onclick="closeTopup()">Болдырмау</button>
-        <button class="modal-btn-ok" onclick="confirmTopup()">Сақтау</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Model selector ── -->
-  <div class="model-bar">
-    {% for key, m in models.items() %}
-    <button class="model-chip {% if key == 'v1.5-pro' %}active{% endif %}"
-            data-model="{{ key }}" data-cost="{{ m.cost }}" onclick="selectModel(this)">
-      <span class="chip-name">{{ m.name }}</span>
-      <span class="chip-tag">{{ m.tag }}</span>
-      <span class="chip-cost">≈{{ (m.cost * 500) | round | int }}₸/5с</span>
-    </button>
-    {% endfor %}
-  </div>
-
-  <!-- ── Main Grid ── -->
-  <div class="studio-grid">
-
-    <!-- LEFT: inputs + controls -->
-    <div class="studio-left">
-
-      <div class="uploads-row">
-        <div class="upload-card" id="beforeCard">
-          <div class="upload-label" id="beforeLabel">Бастапқы фото <span class="req">*</span></div>
-          <div class="drop-zone" id="beforeZone">
-            <input type="file" id="beforeFile" accept="image/*" hidden/>
-            <div class="dz-inner" id="beforeInner">
-              <div class="dz-icon">🖼️</div>
-              <p>Before · Ескі фото</p>
-              <span class="dz-hint">Басу немесе сүйреп апару</span>
-            </div>
-            <img id="beforePreview" class="dz-preview hidden" alt=""/>
-          </div>
+    <!-- Header -->
+    <div class="vs-header">
+      <div>
+        <span class="vs-back">‹ Tools</span>
+        <div class="vs-title-row">
+          <span class="vs-title">Video Generator</span>
+          <span class="vs-help" title="Kling AI + fal.ai арқылы видео жасайды">?</span>
         </div>
+      </div>
+      <button class="vs-templates-btn" onclick="openTopup()">⊞ Кредит</button>
+    </div>
 
-        <div class="upload-divider" id="uploadDivider">→</div>
+    <!-- Balance -->
+    <div class="vs-balance-bar">
+      <span class="vs-bal-icon">💰</span>
+      <span class="vs-bal-amount">$<span id="balanceDisplay">0.00</span></span>
+      <span class="vs-bal-kzt" id="balanceKzt">≈ 0 ₸</span>
+      <button class="vs-bal-add" onclick="openTopup()">+ Кредит қосу</button>
+    </div>
 
-        <div class="upload-card" id="afterCard">
-          <div class="upload-label">Соңғы фото <span class="opt">(қосымша)</span></div>
-          <div class="drop-zone" id="afterZone">
-            <input type="file" id="afterFile" accept="image/*" hidden/>
-            <div class="dz-inner" id="afterInner">
-              <div class="dz-icon">📸</div>
-              <p>After · Жаңа фото</p>
-              <span class="dz-hint">Басу немесе сүйреп апару</span>
-            </div>
-            <img id="afterPreview" class="dz-preview hidden" alt=""/>
-          </div>
+    <!-- MODEL -->
+    <div class="vs-section">
+      <div class="vs-sec-label">MODEL</div>
+      <div class="vs-model-wrap" id="modelWrap">
+        <button class="vs-model-select" onclick="toggleModelDropdown()">
+          <span class="vs-model-gear">⚙</span>
+          <span id="modelLabel">Kling v1.5 · Pro ⭐</span>
+          <span id="modelCostBadge" class="vs-model-cost"></span>
+          <span class="vs-chevron">›</span>
+        </button>
+        <div class="vs-model-dropdown hidden" id="modelDropdown">
+          {% for key, m in models.items() %}
+          <button class="vs-model-opt {% if key == 'v1.5-pro' %}active{% endif %}"
+                  data-model="{{ key }}" data-cost="{{ m.cost }}"
+                  onclick="selectModelOption(this)">
+            <span>{{ m.name }} <span class="vs-opt-tag">{{ m.tag }}</span></span>
+            <span class="vs-opt-cost">≈{{ (m.cost * 500) | round | int }}₸/5с</span>
+          </button>
+          {% endfor %}
         </div>
       </div>
+    </div>
 
-      <!-- Prompt -->
-      <div class="ctrl-block">
-        <label class="ctrl-label">Промт — Видеоны қалай сипаттайсың?</label>
-        <textarea id="promptText" class="ctrl-textarea" rows="3"
-          placeholder="мысалы: smooth transformation, dramatic lighting, cinematic style...">smooth cinematic transformation, dramatic lighting, high quality</textarea>
+    <!-- REFERENCES -->
+    <div class="vs-section">
+      <div class="vs-sec-label">REFERENCES</div>
+      <div class="vs-refs-row">
+        <div class="vs-ref-card" id="beforeZone">
+          <input type="file" id="beforeFile" accept="image/*" hidden/>
+          <img id="beforePreview" class="vs-ref-preview hidden" alt=""/>
+          <div id="beforeInner" class="vs-ref-inner">
+            <div class="vs-ref-ico">⊞</div>
+            <div class="vs-ref-lbl">Start image</div>
+          </div>
+          <div class="vs-ref-clear hidden" id="beforeClear" onclick="clearRef('before',event)">✕</div>
+        </div>
+        <div class="vs-ref-card" id="afterZone">
+          <input type="file" id="afterFile" accept="image/*" hidden/>
+          <img id="afterPreview" class="vs-ref-preview hidden" alt=""/>
+          <div id="afterInner" class="vs-ref-inner">
+            <div class="vs-ref-ico">⊞</div>
+            <div class="vs-ref-lbl">End image</div>
+          </div>
+          <div class="vs-ref-clear hidden" id="afterClear" onclick="clearRef('after',event)">✕</div>
+        </div>
       </div>
+      <div class="vs-media-row">
+        <span class="vs-media-icon" title="Фото">🖼</span>
+        <span class="vs-media-icon" title="GIF">⟳</span>
+        <span class="vs-media-icon" title="Аудио">🔊</span>
+        <span class="vs-media-icon" title="Адам">👤</span>
+        <span class="vs-media-icon" title="Эффект">⬡</span>
+        <button class="vs-media-add" onclick="document.getElementById('beforeFile').click()">+ Add media</button>
+      </div>
+    </div>
 
-      <div class="ctrl-block">
-        <label class="ctrl-label">Теріс промт</label>
-        <input type="text" id="negPrompt" class="ctrl-input"
+    <!-- SHOT -->
+    <div class="vs-section">
+      <div class="vs-sec-label-row">
+        <span class="vs-sec-label">SHOT</span>
+        <button class="vs-shot-add" title="Жаңа shot">+</button>
+      </div>
+      <div class="vs-shot-box">
+        <textarea id="promptText" class="vs-prompt" rows="3"
+          placeholder="Reference your video or images using @image 1">smooth cinematic transformation, dramatic lighting, high quality</textarea>
+        <div class="vs-shot-btns">
+          <button class="vs-shot-btn" title="Теріс промт" onclick="toggleNeg()">☰</button>
+          <button class="vs-shot-btn" title="Тазарту" onclick="document.getElementById('promptText').value=''">✕</button>
+        </div>
+      </div>
+      <div id="negBlock" class="hidden" style="margin-top:6px">
+        <input type="text" id="negPrompt" class="vs-neg-input"
+          placeholder="Теріс промт…"
           value="blurry, distorted, low quality, watermark, text"/>
       </div>
+    </div>
 
-      <!-- Params row -->
-      <div class="params-row">
-        <div class="param-group">
-          <label class="ctrl-label">Ұзақтық</label>
-          <div class="toggle-group">
-            <button class="toggle-btn active" data-val="5" onclick="setParam('duration', this)">5 сек</button>
-            <button class="toggle-btn" data-val="10" onclick="setParam('duration', this)">10 сек</button>
-          </div>
-        </div>
-
-        <div class="param-group">
-          <label class="ctrl-label">Форматы</label>
-          <div class="toggle-group">
-            <button class="toggle-btn active" data-val="16:9" onclick="setParam('aspect', this)">16:9</button>
-            <button class="toggle-btn" data-val="9:16" onclick="setParam('aspect', this)">9:16</button>
-            <button class="toggle-btn" data-val="1:1" onclick="setParam('aspect', this)">1:1</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Generate button -->
-      <button class="gen-btn" id="genBtn" onclick="startVideo()">
-        <span id="genBtnText">⚡ Видео жасау</span>
+    <!-- Controls row -->
+    <div class="vs-ctrl-row">
+      <button class="vs-chip active" id="durChip" onclick="cycleDuration()">
+        ⏱ <span id="durLabel">5"</span>
       </button>
-
-      <!-- Brief "submitting" indicator (hides once queued) -->
-      <div id="submitProgress" class="gen-progress hidden">
-        <div class="gen-spinner"></div>
-        <div class="gen-progress-info">
-          <span id="submitStatus">Жіберілуде…</span>
-        </div>
-      </div>
-
-      <div id="videoError" class="error-msg hidden"></div>
+      <button class="vs-chip active" id="aspChip" onclick="cycleAspect()">
+        ⟷ <span id="aspLabel">16:9</span>
+      </button>
+      <button class="vs-chip active">🔊 ON</button>
     </div>
 
-    <!-- RIGHT: result + queue + history -->
-    <div class="studio-right">
+    <!-- Generate -->
+    <button class="vs-gen-btn" id="genBtn" onclick="startVideo()">
+      <span id="genBtnText">Generate</span>
+      <span class="vs-gen-star">✦</span>
+    </button>
 
-      <div class="result-panel">
-        <div class="result-label" id="resultLabel">Нәтиже</div>
+    <div id="videoError" class="vs-error-msg hidden"></div>
 
-        <div id="resultPlaceholder" class="result-placeholder">
-          <div class="placeholder-film" id="placeholderIcon">🎞️</div>
-          <p id="placeholderText">Видео осы жерде шығады</p>
-          <p class="dz-hint">Фото жүктеп, Generate басыңыз</p>
-        </div>
+  </div><!-- /vs-panel -->
 
-        <video id="resultVideo" class="result-video hidden" controls playsinline></video>
-        <img  id="resultImage" class="result-video hidden" alt="нәтиже" style="object-fit:contain;background:#000"/>
+  <!-- ── Right result area ──────────────────────────── -->
+  <div class="vs-right">
 
-        <div id="resultActions" class="result-actions hidden">
-          <a id="downloadBtn" class="dl-btn" download="video.mp4">⬇ Жүктеп алу</a>
-          <button class="dl-btn secondary" id="resetBtn" onclick="resetVideo()">🔄 Жаңадан</button>
-        </div>
-        <div id="resultError" class="error-msg hidden"></div>
+    <div class="vs-result-panel">
+      <div id="resultPlaceholder" class="vs-result-ph">
+        <div class="vs-ph-icon" id="placeholderIcon">🎞️</div>
+        <p id="placeholderText" class="vs-ph-text">Видео осы жерде шығады</p>
+        <p class="vs-ph-hint">Start image жүктеп, Generate басыңыз</p>
       </div>
-
-      <!-- Active queue panel -->
-      <div class="queue-panel hidden" id="queueSection">
-        <div class="queue-header">
-          <span class="queue-title">⏳ Кезек</span>
-          <span id="queueCount" class="queue-count"></span>
-        </div>
-        <div class="queue-list" id="queueList"></div>
+      <video id="resultVideo" class="vs-video hidden" controls playsinline></video>
+      <img   id="resultImage" class="vs-video hidden" alt="нәтиже" style="object-fit:contain;background:#000"/>
+      <div id="resultActions" class="vs-result-actions hidden">
+        <a id="downloadBtn" class="vs-dl-btn" download="video.mp4">⬇ Жүктеп алу</a>
+        <button class="vs-dl-btn vs-sec" id="resetBtn" onclick="resetVideo()">🔄 Жаңадан</button>
       </div>
-
-      <!-- History panel -->
-      <div class="history-panel hidden" id="historySection">
-        <div class="history-header">
-          <span class="history-title">📋 Тарих</span>
-          <div class="h-header-right">
-            <button id="downloadSelectedBtn" class="h-dl-sel-btn hidden" onclick="downloadSelected()">⬇ <span id="dlSelCount">0 видео</span></button>
-            <label class="h-sel-all-label">
-              <input type="checkbox" id="selectAllChk" onchange="toggleSelectAll()"/> Барлығы
-            </label>
-            <button class="history-clear-btn" onclick="clearHistory()">Тазарту</button>
-          </div>
-        </div>
-        <div class="history-list" id="historyList"></div>
-      </div>
-
     </div>
 
-  </div><!-- /studio-grid -->
+    <!-- Queue -->
+    <div class="vs-queue hidden" id="queueSection">
+      <div class="vs-queue-hdr">
+        <span>⏳ Кезек</span>
+        <span id="queueCount" class="vs-badge">0</span>
+      </div>
+      <div id="queueList"></div>
+    </div>
 
+    <!-- History -->
+    <div class="vs-history hidden" id="historySection">
+      <div class="vs-history-hdr">
+        <span>📋 Тарих</span>
+        <div>
+          <button id="downloadSelectedBtn" class="vs-h-dl hidden" onclick="downloadSelected()">⬇ <span id="dlSelCount">0</span></button>
+          <label class="vs-sel-all"><input type="checkbox" id="selectAllChk" onchange="toggleSelectAll()"/> Барлығы</label>
+          <button class="vs-h-clear" onclick="clearHistory()">Тазарту</button>
+        </div>
+      </div>
+      <div id="historyList"></div>
+    </div>
+
+  </div><!-- /vs-right -->
+
+</div><!-- /vs-root -->
+
+<!-- Topup modal -->
+<div id="topupModal" class="vs-modal-overlay hidden" onclick="closeTopupOutside(event)">
+  <div class="vs-modal-box">
+    <div class="vs-modal-title">💳 Кредит қосу</div>
+    <p class="vs-modal-sub">fal.ai балансыңды осында енгіз. Видео сәтті болғанда автоматты шегеріледі.</p>
+    <div class="vs-modal-row">
+      <span class="vs-modal-dollar">$</span>
+      <input type="number" id="topupInput" class="vs-modal-input" placeholder="0.00" step="0.01" min="0"/>
+    </div>
+    <div class="vs-modal-actions">
+      <button class="vs-modal-cancel" onclick="closeTopup()">Болдырмау</button>
+      <button class="vs-modal-ok" onclick="confirmTopup()">Сақтау</button>
+    </div>
+  </div>
 </div>
 
 <script>
-const MODELS = {{ models | tojson }};
-let selectedModel  = 'v1.5-pro';
-let selectedDur    = '5';
-let selectedAspect = '16:9';
-
+const MODELS      = {{ models | tojson }};
+let selectedModel = 'v1.5-pro';
+let selectedDur   = '5';
+let selectedAspect= '16:9';
+const DURATIONS   = ['5', '10'];
+const ASPECTS     = ['16:9', '9:16', '1:1'];
+let durIdx = 0, aspIdx = 0;
 const KZT_RATE = 500;
-
-// ── Баланс (DB-ден жүктеу) ────────────────────────────────────────────────────
 let _balance = 0;
+let _droppedBefore = null, _droppedAfter = null;
 
+// ── Balance ──────────────────────────────────────────
 async function loadBalance() {
   try {
     const r = await fetch('/api/balance');
@@ -211,7 +859,6 @@ async function loadBalance() {
     renderBalance();
   } catch (_) {}
 }
-
 async function saveBalance(amount) {
   try {
     await fetch('/api/balance', {
@@ -221,338 +868,266 @@ async function saveBalance(amount) {
     });
   } catch (_) {}
 }
-
-async function deductBalance(amount) {
-  try {
-    const r = await fetch('/api/balance', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({action: 'deduct', amount})
-    });
-    const d = await r.json();
-    _balance = d.balance || 0;
-    renderBalance();
-  } catch (_) {}
-}
-
 function renderBalance() {
   document.getElementById('balanceDisplay').textContent = _balance.toFixed(2);
   document.getElementById('balanceKzt').textContent =
     `≈ ${Math.round(_balance * KZT_RATE).toLocaleString('ru-RU')} ₸`;
-  updateBalance();
+  updateCostBadge();
 }
 
-// Топ-ап модал
+// ── Topup modal ──────────────────────────────────────
 function openTopup() {
   document.getElementById('topupInput').value = _balance.toFixed(2);
   document.getElementById('topupModal').classList.remove('hidden');
   document.getElementById('topupInput').focus();
 }
-function closeTopup() {
-  document.getElementById('topupModal').classList.add('hidden');
-}
-function closeTopupOutside(e) {
-  if (e.target.id === 'topupModal') closeTopup();
-}
+function closeTopup() { document.getElementById('topupModal').classList.add('hidden'); }
+function closeTopupOutside(e) { if (e.target.id === 'topupModal') closeTopup(); }
 async function confirmTopup() {
   const val = parseFloat(document.getElementById('topupInput').value) || 0;
   _balance = val;
   await saveBalance(val);
   renderBalance();
   closeTopup();
-  if (typeof showToast === 'function') showToast(`Баланс $${val.toFixed(2)} болып сақталды`, 'success');
+  if (typeof showToast === 'function') showToast(`Баланс $${val.toFixed(2)} сақталды`, 'success');
 }
 
-// Ctrl+V paste — видео бетінде де жұмыс жасасын
-document.addEventListener('paste', e => {
-  const items = e.clipboardData?.items || [];
-  for (const item of items) {
-    if (item.type.startsWith('image/')) {
-      const file = item.getAsFile();
-      if (!file) continue;
-      _droppedBefore = file;
-      showPreview(file,
-        document.getElementById('beforePreview'),
-        document.getElementById('beforeInner'));
-      showToast('Сурет paste жасалды', 'success');
-      break;
-    }
-  }
-});
-
-// ── Model selector
-function selectModel(btn) {
-  document.querySelectorAll('.model-chip').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+// ── Model dropdown ───────────────────────────────────
+function toggleModelDropdown() {
+  const dd = document.getElementById('modelDropdown');
+  const wrap = document.getElementById('modelWrap');
+  dd.classList.toggle('hidden');
+  wrap.classList.toggle('open');
+}
+function selectModelOption(btn) {
   selectedModel = btn.dataset.model;
+  document.querySelectorAll('.vs-model-opt').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const m = MODELS[selectedModel] || {};
+  document.getElementById('modelLabel').textContent = (m.name || '') + ' · ' + (m.tag || '');
+  document.getElementById('modelDropdown').classList.add('hidden');
+  document.getElementById('modelWrap').classList.remove('open');
 
-  const modelInfo = MODELS[selectedModel] || {};
-  const isEdit    = modelInfo.type === 'edit';
-
-  // Nano Banana: тек 1 фото, "After" жасырамыз
-  document.getElementById('afterCard').style.display    = isEdit ? 'none' : '';
-  document.getElementById('uploadDivider').style.display = isEdit ? 'none' : '';
-  document.querySelector('.params-row').style.display   = isEdit ? 'none' : '';
-
-  // Label / button мәтін өзгерту
-  document.getElementById('beforeLabel').innerHTML = isEdit
-    ? 'Фото <span class="req">*</span>'
-    : 'Бастапқы фото <span class="req">*</span>';
-  document.getElementById('genBtnText').textContent = isEdit
-    ? '✨ Фото өңдеу'
-    : '⚡ Видео жасау';
-
-  // Result placeholder мәтін
+  const isEdit = m.type === 'edit';
+  document.getElementById('afterZone').style.display  = isEdit ? 'none' : '';
+  document.getElementById('genBtnText').textContent   = isEdit ? 'Generate photo' : 'Generate';
   document.getElementById('placeholderIcon').textContent = isEdit ? '🖼️' : '🎞️';
   document.getElementById('placeholderText').textContent = isEdit
-    ? 'Өңделген фото осы жерде шығады'
-    : 'Видео осы жерде шығады';
-  document.getElementById('resultLabel').textContent = isEdit ? 'Нәтиже (фото)' : 'Нәтиже';
-
-  updateChipCosts();
-  updateBalance();
+    ? 'Өңделген фото осы жерде шығады' : 'Видео осы жерде шығады';
+  updateCostBadge();
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#modelWrap')) {
+    document.getElementById('modelDropdown').classList.add('hidden');
+    document.getElementById('modelWrap').classList.remove('open');
+  }
+});
+function updateCostBadge() {
+  const m = MODELS[selectedModel] || {};
+  const isEdit = m.type === 'edit';
+  const durMult = isEdit ? 1 : parseInt(selectedDur) / 5;
+  const cost  = (m.cost || 0) * durMult;
+  const kzt   = Math.round(cost * KZT_RATE);
+  const count = cost > 0 ? Math.floor(_balance / cost) : 0;
+  const el    = document.getElementById('modelCostBadge');
+  if (el) el.textContent = cost > 0 ? `≈${kzt}₸ · ~${count}` : '';
 }
 
-function updateBalance() {
-  const activeBtn = document.querySelector('.model-chip.active');
-  const baseCost  = activeBtn ? parseFloat(activeBtn.dataset.cost) || 0 : 0;
-  const modelInfo = MODELS[selectedModel] || {};
-  const isEdit    = modelInfo.type === 'edit';
-  const durMult   = isEdit ? 1 : parseInt(selectedDur || 5) / 5;
-  const cost      = baseCost * durMult;
-  const count     = cost > 0 ? Math.floor(_balance / cost) : 0;
-  const durLabel  = isEdit ? '' : `/${selectedDur}с`;
-  const costKzt   = Math.round(cost * KZT_RATE);
-  const costLabel = document.getElementById('modelCostLabel');
-  if (costLabel) costLabel.textContent = cost > 0 ? `≈${costKzt.toLocaleString('ru-RU')}₸${durLabel}` : '';
-  document.getElementById('genCount').textContent = isEdit ? `~${count} фото` : `~${count} видео`;
+// ── Duration / Aspect cycles ─────────────────────────
+function cycleDuration() {
+  durIdx = (durIdx + 1) % DURATIONS.length;
+  selectedDur = DURATIONS[durIdx];
+  document.getElementById('durLabel').textContent = selectedDur + '"';
+  updateCostBadge();
+}
+function cycleAspect() {
+  aspIdx = (aspIdx + 1) % ASPECTS.length;
+  selectedAspect = ASPECTS[aspIdx];
+  document.getElementById('aspLabel').textContent = selectedAspect;
 }
 
-// ── Param toggles
-function setParam(name, btn) {
-  btn.closest('.toggle-group').querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  if (name === 'duration') { selectedDur = btn.dataset.val; updateChipCosts(); }
-  if (name === 'aspect')   selectedAspect = btn.dataset.val;
-  updateBalance();
+// ── Neg prompt toggle ────────────────────────────────
+function toggleNeg() {
+  document.getElementById('negBlock').classList.toggle('hidden');
 }
 
-function updateChipCosts() {
-  const durMult = parseInt(selectedDur || 5) / 5;
-  document.querySelectorAll('.model-chip').forEach(chip => {
-    const base = parseFloat(chip.dataset.cost) || 0;
-    const kzt  = Math.round(base * durMult * KZT_RATE);
-    const label = durMult === 1 ? '5с' : `${selectedDur}с`;
-    const costEl = chip.querySelector('.chip-cost');
-    if (costEl) costEl.textContent = `≈${kzt.toLocaleString('ru-RU')}₸/${label}`;
+// ── Drop zones ───────────────────────────────────────
+function initDrop(zoneId, inputId, previewId, innerId, clearId, isAfter) {
+  const zone     = document.getElementById(zoneId);
+  const input    = document.getElementById(inputId);
+  const preview  = document.getElementById(previewId);
+  const inner    = document.getElementById(innerId);
+  const clearBtn = document.getElementById(clearId);
+
+  zone.addEventListener('click', e => {
+    if (e.target.closest(`#${clearId}`)) return;
+    input.click();
   });
-}
-
-// ── Drop zones
-// Dropped файлдарды сақтаймыз (input.files DnD-де жаңармайды)
-let _droppedBefore = null;
-let _droppedAfter  = null;
-
-// Браузер бетін ашпасын үшін бет деңгейінде де preventDefault
-document.addEventListener('dragover', e => e.preventDefault());
-document.addEventListener('drop',     e => e.preventDefault());
-
-function initDrop(zoneId, inputId, previewId, innerId, isAfter) {
-  const zone    = document.getElementById(zoneId);
-  const input   = document.getElementById(inputId);
-  const preview = document.getElementById(previewId);
-  const inner   = document.getElementById(innerId);
-
-  zone.addEventListener('click', () => input.click());
-
   zone.addEventListener('dragover', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    zone.classList.add('dz-over');
+    e.preventDefault(); e.stopPropagation();
+    zone.classList.add('vs-dz-over');
   });
   zone.addEventListener('dragleave', e => {
-    if (!zone.contains(e.relatedTarget)) zone.classList.remove('dz-over');
+    if (!zone.contains(e.relatedTarget)) zone.classList.remove('vs-dz-over');
   });
   zone.addEventListener('drop', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    zone.classList.remove('dz-over');
+    e.preventDefault(); e.stopPropagation();
+    zone.classList.remove('vs-dz-over');
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
       if (isAfter) _droppedAfter = file; else _droppedBefore = file;
-      showPreview(file, preview, inner);
+      showPreview(file, preview, inner, clearBtn);
     }
   });
   input.addEventListener('change', () => {
     if (input.files[0]) {
       if (isAfter) _droppedAfter = null; else _droppedBefore = null;
-      showPreview(input.files[0], preview, inner);
+      showPreview(input.files[0], preview, inner, clearBtn);
     }
   });
 }
-
-function showPreview(file, preview, inner) {
+function showPreview(file, preview, inner, clearBtn) {
   const reader = new FileReader();
   reader.onload = e => {
     preview.src = e.target.result;
     preview.classList.remove('hidden');
     inner.classList.add('hidden');
+    if (clearBtn) clearBtn.classList.remove('hidden');
   };
   reader.readAsDataURL(file);
 }
-initDrop('beforeZone', 'beforeFile', 'beforePreview', 'beforeInner', false);
-initDrop('afterZone',  'afterFile',  'afterPreview',  'afterInner',  true);
+function clearRef(which, e) {
+  e.stopPropagation();
+  if (which === 'before') {
+    _droppedBefore = null;
+    document.getElementById('beforeFile').value = '';
+    document.getElementById('beforePreview').classList.add('hidden');
+    document.getElementById('beforeInner').classList.remove('hidden');
+    document.getElementById('beforeClear').classList.add('hidden');
+  } else {
+    _droppedAfter = null;
+    document.getElementById('afterFile').value = '';
+    document.getElementById('afterPreview').classList.add('hidden');
+    document.getElementById('afterInner').classList.remove('hidden');
+    document.getElementById('afterClear').classList.add('hidden');
+  }
+}
+initDrop('beforeZone','beforeFile','beforePreview','beforeInner','beforeClear', false);
+initDrop('afterZone', 'afterFile', 'afterPreview', 'afterInner', 'afterClear',  true);
 
-// ── Helpers
-function getThumb(imgEl) {
-  if (!imgEl || imgEl.classList.contains('hidden') || !imgEl.naturalWidth) return '';
-  try {
-    const maxSize = 90;
-    const ratio   = Math.min(maxSize / imgEl.naturalWidth, maxSize / imgEl.naturalHeight, 1);
-    const w = Math.round(imgEl.naturalWidth * ratio);
-    const h = Math.round(imgEl.naturalHeight * ratio);
-    const c = document.createElement('canvas');
-    c.width = w; c.height = h;
-    c.getContext('2d').drawImage(imgEl, 0, 0, w, h);
-    return c.toDataURL('image/jpeg', 0.65);
-  } catch (_) { return ''; }
-}
-function esc(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function fmtTime(ms) {
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  return m > 0 ? `${m}м ${s % 60}с` : `${s}с`;
-}
+document.addEventListener('paste', e => {
+  const items = e.clipboardData?.items || [];
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const file = item.getAsFile(); if (!file) continue;
+      _droppedBefore = file;
+      showPreview(file,
+        document.getElementById('beforePreview'),
+        document.getElementById('beforeInner'),
+        document.getElementById('beforeClear'));
+      if (typeof showToast === 'function') showToast('Сурет paste жасалды', 'success');
+      break;
+    }
+  }
+});
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop',     e => e.preventDefault());
 
-// ── Multi-queue system
-// _activeJobs: Map(taskId → { modelKey, modelName, cost, prompt, thumbBefore, thumbAfter, startTime, statusText })
-// _pollTimers: Map(taskId → { pollId, tickId })
+// ── Generate / poll ──────────────────────────────────
 const _activeJobs = new Map();
 const _pollTimers = new Map();
 
 async function startVideo() {
-  const beforeInput  = document.getElementById('beforeFile');
-  const beforeFile   = _droppedBefore || beforeInput.files[0];
-  if (!beforeFile) { showErr('Бастапқы фото (Before) жүктеңіз'); return; }
+  const beforeFile = _droppedBefore || document.getElementById('beforeFile').files[0];
+  if (!beforeFile) { showErr('Start image жүктеңіз'); return; }
 
-  const btn        = document.getElementById('genBtn');
-  const submitProg = document.getElementById('submitProgress');
-  const errEl      = document.getElementById('videoError');
-
+  const btn = document.getElementById('genBtn');
   btn.disabled = true;
-  btn.querySelector('#genBtnText').textContent = '⏳ Жіберілуде…';
-  submitProg.classList.remove('hidden');
-  errEl.classList.add('hidden');
+  document.getElementById('genBtnText').textContent = '⏳ Жіберілуде…';
+  document.getElementById('videoError').classList.add('hidden');
 
-  const thumbBefore = getThumb(document.getElementById('beforePreview'));
-  const thumbAfter  = getThumb(document.getElementById('afterPreview'));
+  const afterFile   = _droppedAfter || document.getElementById('afterFile').files[0] || null;
   const prompt      = document.getElementById('promptText').value;
   const modelInfo   = MODELS[selectedModel] || {};
-  const costBtn     = document.querySelector('.model-chip.active');
-  const baseCost    = costBtn ? parseFloat(costBtn.dataset.cost) || 0 : 0;
-  const durMult     = parseInt(selectedDur || 5) / 5;
-  const cost        = baseCost * durMult;
-  const modelKey    = selectedModel;
-
-  const afterInput = document.getElementById('afterFile');
-  const afterFile  = _droppedAfter || afterInput.files[0] || null;
+  const isEdit      = modelInfo.type === 'edit';
+  const durMult     = isEdit ? 1 : parseInt(selectedDur) / 5;
+  const cost        = (modelInfo.cost || 0) * durMult;
+  const thumbBefore = getThumb(document.getElementById('beforePreview'));
+  const thumbAfter  = getThumb(document.getElementById('afterPreview'));
 
   const fd = new FormData();
-  fd.append('before_photo', beforeFile);
+  fd.append('before_photo',  beforeFile);
   if (afterFile) fd.append('after_photo', afterFile);
-  fd.append('model',        selectedModel);
-  fd.append('duration',     selectedDur);
-  fd.append('aspect_ratio', selectedAspect);
-  fd.append('prompt',       prompt);
-  fd.append('neg_prompt',   document.getElementById('negPrompt').value);
+  fd.append('model',         selectedModel);
+  fd.append('duration',      selectedDur);
+  fd.append('aspect_ratio',  selectedAspect);
+  fd.append('prompt',        prompt);
+  fd.append('neg_prompt',    document.getElementById('negPrompt')?.value || 'blurry, distorted, low quality');
 
   try {
     const res  = await fetch('/api/generate-video', { method: 'POST', body: fd });
     const data = await res.json();
     if (data.error) { showErr(data.error); return; }
 
-    const taskId = data.task_id;
+    const taskId  = data.task_id;
     const jobData = {
-      taskId,
-      modelKey,
-      modelName:  (modelInfo.name || 'Kling') + ' · ' + (modelInfo.tag || ''),
-      cost,
-      prompt,
-      thumbBefore,
-      thumbAfter,
-      startTime:  Date.now(),
+      taskId, modelKey: selectedModel,
+      modelName: (modelInfo.name||'Kling') + ' · ' + (modelInfo.tag||''),
+      cost, prompt, thumbBefore, thumbAfter,
+      startTime: Date.now(),
       statusText: 'Кезекте…',
     };
     _activeJobs.set(taskId, jobData);
     savePendingToStorage();
     renderQueue();
-
-    // Тарихқа pending күйінде қосу — баланс КЕСПЕЙМІЗ, тек сәтті болса кесіледі
-    addPendingToHistory(taskId, cost, modelKey, thumbBefore, thumbAfter, prompt);
-
+    addPendingToHistory(taskId, cost, selectedModel, thumbBefore, thumbAfter, prompt);
     startJobPoll(taskId);
-
   } catch (e) {
     showErr('Байланыс қатесі: ' + e.message);
   } finally {
     btn.disabled = false;
-    btn.querySelector('#genBtnText').textContent = '⚡ Видео жасау';
-    submitProg.classList.add('hidden');
+    document.getElementById('genBtnText').textContent = isEdit ? 'Generate photo' : 'Generate';
   }
 }
 
 function startJobPoll(taskId) {
-  let attempts = 0;
-  let stopped = false;
-
-  // 1-second tick for time display
+  let attempts = 0, stopped = false;
   const tickId = setInterval(() => {
     if (!_activeJobs.has(taskId)) { clearInterval(tickId); return; }
     renderQueue();
   }, 1000);
-
   _pollTimers.set(taskId, { pollId: null, tickId });
 
-  // setTimeout-based polling — prevents race conditions from overlapping requests
   async function pollOnce() {
     if (stopped || !_activeJobs.has(taskId)) return;
     attempts++;
-
     try {
       const r    = await fetch(`/api/video-status/${taskId}`);
       const data = await r.json();
-
       if (stopped || !_activeJobs.has(taskId)) return;
-
-      const job = _activeJobs.get(taskId);
-      if (!job) return;
+      const job  = _activeJobs.get(taskId); if (!job) return;
 
       if (data.status === 'succeed' && data.video_url) {
-        stopped = true;
-        stopJob(taskId);
+        stopped = true; stopJob(taskId);
         updateHistoryStatus(taskId, 'success', data.video_url);
         displayResult(data.video_url);
+        loadBalance();
         return;
       }
-
       if (data.status === 'failed') {
-        stopped = true;
-        stopJob(taskId);
+        stopped = true; stopJob(taskId);
         updateHistoryStatus(taskId, 'failed');
-        showErr('Видео жасалмады. Қайтадан сынап көріңіз.');
+        showErr((data.error_msg || 'Видео жасалмады. Қайтадан сынап көріңіз.'));
+        loadBalance();
         return;
       }
-
       if (data.error) {
-        stopped = true;
-        stopJob(taskId);
+        stopped = true; stopJob(taskId);
         updateHistoryStatus(taskId, 'failed');
         showErr(data.error);
+        loadBalance();
         return;
       }
-
       if (data.queue_pos !== undefined) {
         job.statusText = `Кезекте: ${data.queue_pos + 1}-орын`;
       } else {
@@ -560,66 +1135,51 @@ function startJobPoll(taskId) {
         job.statusText = msgs[attempts % msgs.length];
       }
       renderQueue();
-
       if (attempts > 72) {
-        stopped = true;
-        stopJob(taskId);
+        stopped = true; stopJob(taskId);
         updateHistoryStatus(taskId, 'failed');
         showErr('Уақыт аяқталды (12 мин).');
         return;
       }
     } catch (_) {}
-
     if (!stopped) setTimeout(pollOnce, 10000);
   }
-
   setTimeout(pollOnce, 10000);
 }
 
 function stopJob(taskId) {
   const timers = _pollTimers.get(taskId);
-  if (timers) {
-    clearInterval(timers.pollId);
-    clearInterval(timers.tickId);
-    _pollTimers.delete(taskId);
-  }
+  if (timers) { clearInterval(timers.pollId); clearInterval(timers.tickId); _pollTimers.delete(taskId); }
   _activeJobs.delete(taskId);
   savePendingToStorage();
   renderQueue();
 }
+async function cancelJob(taskId) {
+  stopJob(taskId);
+  updateHistoryStatus(taskId, 'cancelled');
+  try { await fetch(`/api/cancel-video/${taskId}`, { method: 'POST' }); } catch (_) {}
+  loadBalance();
+}
 
-// ── Pending jobs persistence (localStorage)
 function savePendingToStorage() {
   try {
     const jobs = [..._activeJobs.values()].map(j => ({
-      taskId:      j.taskId,
-      modelKey:    j.modelKey,
-      modelName:   j.modelName,
-      cost:        j.cost,
-      prompt:      j.prompt,
-      thumbBefore: j.thumbBefore,
-      thumbAfter:  j.thumbAfter,
-      startTime:   j.startTime,
+      taskId: j.taskId, modelKey: j.modelKey, modelName: j.modelName,
+      cost: j.cost, prompt: j.prompt, thumbBefore: j.thumbBefore,
+      thumbAfter: j.thumbAfter, startTime: j.startTime,
     }));
     localStorage.setItem('pendingJobs', JSON.stringify(jobs));
   } catch (_) {}
 }
-
 function recoverPendingJobs() {
   try {
-    // Mark history items that have been pending for >20 min as failed (server likely lost them)
-    const STALE_MS = 20 * 60 * 1000;
-    const hist = JSON.parse(localStorage.getItem('videoHistory') || '[]');
+    const STALE = 20 * 60 * 1000;
+    const hist  = JSON.parse(localStorage.getItem('videoHistory') || '[]');
     let changed = false;
     hist.forEach(item => {
-      if (item.status === 'pending' && (Date.now() - item.ts) > STALE_MS) {
-        item.status = 'failed'; changed = true;
-      }
+      if (item.status === 'pending' && (Date.now() - item.ts) > STALE) { item.status = 'failed'; changed = true; }
     });
-    if (changed) {
-      try { localStorage.setItem('videoHistory', JSON.stringify(hist)); } catch (_) {}
-    }
-
+    if (changed) { try { localStorage.setItem('videoHistory', JSON.stringify(hist)); } catch (_) {} }
     const jobs = JSON.parse(localStorage.getItem('pendingJobs') || '[]');
     if (!jobs.length) { if (changed) renderHistory(); return; }
     for (const job of jobs) {
@@ -632,80 +1192,61 @@ function recoverPendingJobs() {
   } catch (_) {}
 }
 
-async function cancelJob(taskId) {
-  stopJob(taskId);
-  updateHistoryStatus(taskId, 'cancelled');
-  try { await fetch(`/api/cancel-video/${taskId}`, { method: 'POST' }); } catch (_) {}
-}
-
+// ── Queue render ─────────────────────────────────────
 function renderQueue() {
   const section = document.getElementById('queueSection');
   const list    = document.getElementById('queueList');
-  const countEl = document.getElementById('queueCount');
-
+  const cnt     = document.getElementById('queueCount');
   if (!_activeJobs.size) { section.classList.add('hidden'); return; }
   section.classList.remove('hidden');
-  countEl.textContent = `${_activeJobs.size} жұмыс`;
-
-  list.innerHTML = [..._activeJobs.entries()].map(([taskId, job]) => {
-    const elapsed  = Date.now() - job.startTime;
-    const beforeImg = job.thumbBefore
-      ? `<img src="${job.thumbBefore}" class="h-photo" alt=""/>`
-      : `<div class="h-photo h-photo-empty">🖼</div>`;
-    const afterImg = job.thumbAfter
-      ? `<span class="h-arr">→</span><img src="${job.thumbAfter}" class="h-photo" alt=""/>`
+  cnt.textContent = `${_activeJobs.size}`;
+  list.innerHTML = [..._activeJobs.entries()].map(([tid, job]) => {
+    const elapsed = Date.now() - job.startTime;
+    const bImg = job.thumbBefore
+      ? `<img src="${job.thumbBefore}" class="vs-q-thumb"/>`
+      : `<div class="vs-q-thumb vs-q-empty">🖼</div>`;
+    const aImg = job.thumbAfter
+      ? `<span class="vs-q-arr">→</span><img src="${job.thumbAfter}" class="vs-q-thumb"/>`
       : '';
-    return `<div class="queue-item">
-      <div class="h-photos">${beforeImg}${afterImg}</div>
-      <div class="q-body">
-        <span class="history-model">${esc(job.modelName)}</span>
-        <span class="q-status">${esc(job.statusText)}</span>
+    return `<div class="vs-q-item">
+      <div class="vs-q-photos">${bImg}${aImg}</div>
+      <div class="vs-q-body">
+        <span class="vs-q-model">${esc(job.modelName)}</span>
+        <span class="vs-q-status">${esc(job.statusText)}</span>
       </div>
-      <span class="q-time">${fmtTime(elapsed)}</span>
-      <div class="q-spinner"></div>
-      <button class="cancel-gen-btn" onclick="cancelJob('${taskId}')">✕</button>
+      <span class="vs-q-time">${fmtTime(elapsed)}</span>
+      <div class="vs-q-spinner"></div>
+      <button class="vs-q-cancel" onclick="cancelJob('${tid}')">✕</button>
     </div>`;
   }).join('');
 }
 
-// ── Result display
+// ── Result display ───────────────────────────────────
 function displayResult(url) {
   document.getElementById('resultPlaceholder').classList.add('hidden');
-
-  const modelInfo = MODELS[selectedModel] || {};
-  const isEdit    = modelInfo.type === 'edit';
-
+  const isEdit  = (MODELS[selectedModel] || {}).type === 'edit';
   const videoEl = document.getElementById('resultVideo');
   const imageEl = document.getElementById('resultImage');
   const dlBtn   = document.getElementById('downloadBtn');
-
   if (isEdit) {
-    imageEl.src = url;
-    imageEl.classList.remove('hidden');
-    videoEl.classList.add('hidden');
-    dlBtn.href     = `/api/download-video?url=${encodeURIComponent(url)}&name=result.jpg`;
-    dlBtn.download = 'result.jpg';
-    dlBtn.textContent = '⬇ Фото жүктеу';
+    imageEl.src = url; imageEl.classList.remove('hidden'); videoEl.classList.add('hidden');
+    dlBtn.href = `/api/download-video?url=${encodeURIComponent(url)}&name=result.jpg`;
+    dlBtn.download = 'result.jpg'; dlBtn.textContent = '⬇ Фото жүктеу';
     document.getElementById('resetBtn').textContent = '🔄 Жаңа фото';
   } else {
-    videoEl.src = url;
-    videoEl.classList.remove('hidden');
-    imageEl.classList.add('hidden');
-    dlBtn.href     = `/api/download-video?url=${encodeURIComponent(url)}&name=video.mp4`;
-    dlBtn.download = 'video.mp4';
-    dlBtn.textContent = '⬇ Жүктеп алу';
+    videoEl.src = url; videoEl.classList.remove('hidden'); imageEl.classList.add('hidden');
+    dlBtn.href = `/api/download-video?url=${encodeURIComponent(url)}&name=video.mp4`;
+    dlBtn.download = 'video.mp4'; dlBtn.textContent = '⬇ Жүктеп алу';
     document.getElementById('resetBtn').textContent = '🔄 Жаңадан';
   }
   document.getElementById('resultActions').classList.remove('hidden');
 }
-
 function resetVideo() {
   document.getElementById('resultVideo').classList.add('hidden');
   document.getElementById('resultImage').classList.add('hidden');
   document.getElementById('resultActions').classList.add('hidden');
   document.getElementById('resultPlaceholder').classList.remove('hidden');
 }
-
 function showErr(msg) {
   const el = document.getElementById('videoError');
   el.textContent = '❌ ' + msg;
@@ -713,149 +1254,105 @@ function showErr(msg) {
   if (typeof showToast === 'function') showToast(msg, 'error');
 }
 
-// ── History
+// ── History ──────────────────────────────────────────
 let _history = [];
-
 function addPendingToHistory(taskId, cost, modelKey, thumbBefore, thumbAfter, prompt) {
-  const modelInfo = MODELS[modelKey] || {};
+  const m = MODELS[modelKey] || {};
   _history = JSON.parse(localStorage.getItem('videoHistory') || '[]');
   _history.unshift({
-    taskId,
-    status:      'pending',
-    url:         '',
-    modelName:   (modelInfo.name || 'Kling') + ' · ' + (modelInfo.tag || ''),
-    cost,
-    ts:          Date.now(),
-    thumbBefore: thumbBefore || '',
-    thumbAfter:  thumbAfter  || '',
-    prompt:      prompt      || '',
+    taskId, status: 'pending', url: '',
+    modelName: (m.name||'Kling')+' · '+(m.tag||''),
+    cost, ts: Date.now(),
+    thumbBefore: thumbBefore||'', thumbAfter: thumbAfter||'', prompt: prompt||''
   });
   if (_history.length > 30) _history.splice(30);
   try { localStorage.setItem('videoHistory', JSON.stringify(_history)); } catch (_) {}
   renderHistory();
 }
-
 function updateHistoryStatus(taskId, status, url = '') {
   _history = JSON.parse(localStorage.getItem('videoHistory') || '[]');
   const item = _history.find(h => h.taskId === taskId);
-  if (item) {
-    item.status = status;
-    if (url) item.url = url;
-    try { localStorage.setItem('videoHistory', JSON.stringify(_history)); } catch (_) {}
-  }
+  if (item) { item.status = status; if (url) item.url = url; try { localStorage.setItem('videoHistory', JSON.stringify(_history)); } catch (_) {} }
   renderHistory();
 }
-
 function renderHistory() {
   _history = JSON.parse(localStorage.getItem('videoHistory') || '[]');
   const section = document.getElementById('historySection');
   const list    = document.getElementById('historyList');
   if (!_history.length) { section.classList.add('hidden'); return; }
   section.classList.remove('hidden');
-
   list.innerHTML = _history.map((item, i) => {
-    const status = item.status || 'success'; // old items without status = success
-    const isSuccess = status === 'success';
+    const isOk = item.status === 'success';
     const d    = new Date(item.ts);
-    const dStr = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
-               + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-    const kzt  = status === 'success' ? Math.round((item.cost || 0) * KZT_RATE) : 0;
-    const beforeImg = item.thumbBefore
-      ? `<img src="${item.thumbBefore}" class="h-photo" alt="before"/>`
-      : `<div class="h-photo h-photo-empty">🖼</div>`;
-    const afterImg = item.thumbAfter
-      ? `<span class="h-arr">→</span><img src="${item.thumbAfter}" class="h-photo" alt="after"/>`
-      : '';
-    const promptHtml = item.prompt
-      ? `<div class="h-prompt">"${esc(item.prompt.length > 70 ? item.prompt.slice(0,70)+'…' : item.prompt)}"</div>`
-      : '';
-    const statusBadge = {
-      'pending':   '<span class="h-status h-status-pending">⏳ Күтуде</span>',
-      'success':   '',
-      'failed':    '<span class="h-status h-status-failed">❌ Сәтсіз</span>',
-      'cancelled': '<span class="h-status h-status-cancelled">🚫 Жойылды</span>',
-    }[status] || '';
-    const checkboxHtml = isSuccess
-      ? `<input type="checkbox" class="h-checkbox" data-idx="${i}" data-url="${esc(item.url)}"
-             onclick="event.stopPropagation(); updateDlBtn()"/>`
-      : `<div class="h-checkbox-placeholder"></div>`;
-    const dlUrl = `/api/download-video?url=${encodeURIComponent(item.url)}&name=video_${i+1}.mp4`;
-    const dlHtml = isSuccess
-      ? `<a href="${dlUrl}" download="video_${i+1}.mp4" class="history-dl"
-         onclick="event.stopPropagation()" title="Жүктеу">⬇</a>`
-      : '';
-    const clickAttr = isSuccess ? `onclick="playFromHistory(${i})"` : '';
-    return `<div class="history-item${isSuccess ? '' : ' h-item-nondl'}" ${clickAttr}>
-      ${checkboxHtml}
-      <div class="h-photos">${beforeImg}${afterImg}</div>
-      <div class="h-body">
-        <div class="h-top-row">
-          <span class="history-model">${esc(item.modelName)}</span>
-          ${statusBadge}
-          <span class="h-cost ${status !== 'success' ? 'h-cost-free' : ''}">${status === 'success' ? '-' : ''}${kzt.toLocaleString('ru-RU')}₸</span>
-        </div>
+    const dStr = d.toLocaleDateString('ru-RU',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+    const kzt  = isOk ? Math.round((item.cost||0)*KZT_RATE) : 0;
+    const bImg = item.thumbBefore ? `<img src="${item.thumbBefore}" class="vs-h-thumb"/>` : `<div class="vs-h-thumb vs-h-empty">🖼</div>`;
+    const aImg = item.thumbAfter  ? `<span style="color:var(--muted);font-size:.8rem">→</span><img src="${item.thumbAfter}" class="vs-h-thumb"/>` : '';
+    const badge = {pending:'<span class="vs-hbadge">⏳</span>',failed:'<span class="vs-hbadge">❌</span>',cancelled:'<span class="vs-hbadge">🚫</span>'}[item.status]||'';
+    const cbx  = isOk ? `<input type="checkbox" class="vs-h-chk" data-idx="${i}" data-url="${esc(item.url)}" onclick="event.stopPropagation();updateDlBtn()"/>` : '<span style="width:14px;display:inline-block"></span>';
+    const dlHtml = isOk ? `<a href="/api/download-video?url=${encodeURIComponent(item.url)}&name=video_${i+1}.mp4" download="video_${i+1}.mp4" class="vs-h-dl-btn" onclick="event.stopPropagation()">⬇</a>` : '';
+    const clickAttr = isOk ? `onclick="playFromHistory(${i})"` : '';
+    const promptHtml = item.prompt ? `<div class="vs-h-prompt">"${esc(item.prompt.length>60?item.prompt.slice(0,60)+'…':item.prompt)}"</div>` : '';
+    return `<div class="vs-h-item${isOk?'':' vs-h-nondl'}" ${clickAttr}>
+      ${cbx}
+      <div class="vs-h-photos">${bImg}${aImg}</div>
+      <div class="vs-h-body">
+        <div class="vs-h-top">${badge}<span class="vs-h-model">${esc(item.modelName)}</span><span class="vs-h-cost${!isOk?' free':''}">${isOk?'-':''}${kzt.toLocaleString('ru-RU')}₸</span></div>
         ${promptHtml}
-        <span class="history-date">${dStr}</span>
+        <span class="vs-h-date">${dStr}</span>
       </div>
       ${dlHtml}
     </div>`;
   }).join('');
 }
-
 function playFromHistory(i) {
-  const item = _history[i];
-  if (!item) return;
+  const item = _history[i]; if (!item) return;
   displayResult(item.url);
-  document.getElementById('resultVideo').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  document.getElementById('resultVideo').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
-
-function clearHistory() {
-  localStorage.removeItem('videoHistory');
-  _history = [];
-  renderHistory();
-}
-
-// ── Bulk select/download
+function clearHistory() { localStorage.removeItem('videoHistory'); _history=[]; renderHistory(); }
 function toggleSelectAll() {
   const chk = document.getElementById('selectAllChk');
-  document.querySelectorAll('.h-checkbox').forEach(cb => cb.checked = chk.checked);
+  document.querySelectorAll('.vs-h-chk').forEach(cb => cb.checked = chk.checked);
   updateDlBtn();
 }
-
 function updateDlBtn() {
-  const n   = document.querySelectorAll('.h-checkbox:checked').length;
-  const tot = document.querySelectorAll('.h-checkbox').length;
+  const n   = document.querySelectorAll('.vs-h-chk:checked').length;
+  const tot = document.querySelectorAll('.vs-h-chk').length;
   const btn = document.getElementById('downloadSelectedBtn');
-  const cnt = document.getElementById('dlSelCount');
-  if (n > 0) {
-    btn.classList.remove('hidden');
-    cnt.textContent = `${n} видео`;
-  } else {
-    btn.classList.add('hidden');
+  document.getElementById('dlSelCount').textContent = `${n}`;
+  n > 0 ? btn.classList.remove('hidden') : btn.classList.add('hidden');
+  const sa = document.getElementById('selectAllChk');
+  if (sa) { sa.indeterminate = n>0&&n<tot; sa.checked = tot>0&&n===tot; }
+}
+async function downloadSelected() {
+  const boxes = [...document.querySelectorAll('.vs-h-chk:checked')];
+  for (let i=0; i<boxes.length; i++) {
+    const url=boxes[i].dataset.url, idx=parseInt(boxes[i].dataset.idx);
+    const a=document.createElement('a');
+    a.href=`/api/download-video?url=${encodeURIComponent(url)}&name=video_${idx+1}.mp4`;
+    a.download=`video_${idx+1}.mp4`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    if (i<boxes.length-1) await new Promise(r=>setTimeout(r,1000));
   }
-  const selAll = document.getElementById('selectAllChk');
-  if (selAll) selAll.indeterminate = n > 0 && n < tot;
-  if (selAll) selAll.checked = tot > 0 && n === tot;
 }
 
-async function downloadSelected() {
-  const boxes = [...document.querySelectorAll('.h-checkbox:checked')];
-  for (let i = 0; i < boxes.length; i++) {
-    const url  = boxes[i].dataset.url;
-    const idx  = parseInt(boxes[i].dataset.idx);
-    const a    = document.createElement('a');
-    a.href     = `/api/download-video?url=${encodeURIComponent(url)}&name=video_${idx+1}.mp4`;
-    a.download = `video_${idx+1}.mp4`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    if (i < boxes.length - 1) await new Promise(r => setTimeout(r, 1000));
-  }
+// ── Helpers ───────────────────────────────────────────
+function getThumb(imgEl) {
+  if (!imgEl||imgEl.classList.contains('hidden')||!imgEl.naturalWidth) return '';
+  try {
+    const maxSize=90, ratio=Math.min(maxSize/imgEl.naturalWidth,maxSize/imgEl.naturalHeight,1);
+    const w=Math.round(imgEl.naturalWidth*ratio), h=Math.round(imgEl.naturalHeight*ratio);
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(imgEl,0,0,w,h);
+    return c.toDataURL('image/jpeg',0.65);
+  } catch(_){ return ''; }
 }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtTime(ms){ const s=Math.floor(ms/1000),m=Math.floor(s/60); return m>0?`${m}м ${s%60}с`:`${s}с`; }
 
 loadBalance();
 renderHistory();
 recoverPendingJobs();
-updateChipCosts();
 </script>
 {% endblock %}
